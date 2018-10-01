@@ -3,6 +3,15 @@ from time import sleep
 
 
 class CBPComponent:
+    """
+    This class is for implementing the CBP component
+
+    Parameters
+    ----------
+
+    address : str
+    port : int
+    """
     def __init__(self,address: str, port: int):
         self.socket = None
         self.altitude = None
@@ -146,6 +155,7 @@ def main():
     cbp = CBPComponent("140.252.33.12", 5000)
     cbp.move_azimuth(0)
     print("moved")
+
 
 if __name__ == '__main__':
     main()
