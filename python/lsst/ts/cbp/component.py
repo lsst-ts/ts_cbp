@@ -12,7 +12,7 @@ class CBPComponent:
     address : str
     port : int
     """
-    def __init__(self,address: str, port: int, frequency: float = 0.05):
+    def __init__(self,address: str, port: int):
         self.log = logging.getLogger(__name__)
         self.socket = None
         self.altitude = None
@@ -20,7 +20,6 @@ class CBPComponent:
         self.mask = None
         self.mask_rotation = None
         self.mask_dictionary = {}
-        self.frequency = frequency
         self.focus = None
         self._address = address
         self._port = port
@@ -43,59 +42,50 @@ class CBPComponent:
         self.log.debug("CBP connected to {0} on port {1}".format(self._address, self._port))
 
     def get_azimuth(self):
-        self.log.debug('get_azimuth received')
         self.socket.sendall("az=?\r".encode('ascii'))
-        self.azimuth = self.socket.recv(128).decode('ascii', 'ignore')
-        self.log.debug("get_azimuth gotten")
+        self.azimuth = float(self.socket.recv(128).decode('ascii', 'ignore').split("\r")[0])
 
     def move_azimuth(self,position: float):
-        self.log.debug("move_azimuth received")
         self.socket.sendall("new_az={0:f}\r".format(position).encode('ascii'))
         reply = self.socket.recv(128).decode('ascii', 'ignore')
-        self.log.debug("move_azimuth sent")
-        self.publish()
 
 
     def get_altitude(self):
         self.log.debug("get_altitude sent")
         self.socket.sendall("alt=?\r".encode('ascii'))
-        self.altitude = self.socket.recv(128).decode('ascii', 'ignore')
+        self.altitude = float(self.socket.recv(128).decode('ascii', 'ignore').split("\r")[0])
 
     def move_altitude(self,position: float):
         self.socket.sendall("new_alt={0:f}\r".format(position).encode('ascii'))
         reply = self.socket.recv(128).decode('ascii', 'ignore')
-        self.publish()
 
     def get_focus(self):
         self.socket.sendall("foc=?\r".encode('ascii'))
-        self.focus = self.socket.recv(128).decode('ascii')
+        self.focus = self.socket.recv(128).decode('ascii').split("\r")[0]
 
     def change_focus(self,position: int):
         self.socket.sendall("new_foc={0:f}\r".format(position).encode('ascii'))
         reply = self.socket.recv(128).decode('ascii', 'ignore')
-        self.publish()
 
     def get_mask(self):
         self.socket.sendall("msk=?\r".encode('ascii'))
-        self.mask = self.socket.recv(128).decode('ascii')
+        self.mask = self.socket.recv(128).decode('ascii').split("\r")[0]
 
     def set_mask(self, mask: str):
         self.socket.sendall("new_msk={0:f}".format(self.mask_dictionary[mask]).encode('ascii'))
         reply = self.socket.recv(128).decode('ascii', 'ignore')
-        self.publish()
 
     def get_mask_rotation(self):
         self.socket.sendall("rot=?\r".encode('ascii'))
-        self.mask_rotation = self.socket.recv(128).decode('ascii')
+        self.mask_rotation = float(self.socket.recv(128).decode('ascii').split("\r")[0])
 
     def set_mask_rotation(self,mask_rotation: float):
         self.socket.sendall("new_rot={0:f}".format(mask_rotation).encode('ascii'))
         reply = self.socket.recv(128).decode('ascii', 'ignore')
-        self.publish()
 
     def check_panic_status(self):
         self.socket.sendall("wdpanic=?\r".encode('ascii'))
-        self.panic_status = self.socket.recv(128).decode('ascii', 'ignore')
+        self.panic_status = float(self.socket.recv(128).decode('ascii', 'ignore').split('\r')[0])
 
     def check_cbp_status(self):
         self.socket.sendall("AAstat=?\r".encode('ascii'))
@@ -124,7 +114,7 @@ class CBPComponent:
 
 def main():
     cbp = CBPComponent("140.252.33.12", 5000)
-    cbp.move_azimuth(0)
+    print("")
 
 
 if __name__ == '__main__':
