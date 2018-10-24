@@ -1,6 +1,6 @@
 import logging
 import socket
-
+from bidict import bidict
 
 class CBPComponent:
     """
@@ -19,7 +19,8 @@ class CBPComponent:
         self.azimuth = None
         self.mask = None
         self.mask_rotation = None
-        self.mask_dictionary = {}
+        self.mask_dictionary = bidict({1:"Bob Hoskins 1",2:"Bob Hoskins 2",3:"Bob Hoskins 3",4:"Bob Hoskins 4",5:"Bob Hoskins 5"})
+        self.mask_rotation_dictionary = {"Bob Hoskins 1":0,"Bob Hoskins 2":0,"Bob Hoskins 3":0,"Bob Hoskins 4":0,"Bob Hoskins 5":0}
         self.focus = None
         self._address = address
         self._port = port
@@ -27,6 +28,9 @@ class CBPComponent:
         self.get_cbp_telemetry()
         self.panic_status = None
         self.check_panic_status()
+        self.auto_park = None
+        self.park = None
+        self.check_auto_park()
         self.azimuth_status = None
         self.altitude_status = None
         self.mask_select_status = None
@@ -49,7 +53,6 @@ class CBPComponent:
         self.socket.sendall("new_az={0:f}\r".format(position).encode('ascii'))
         reply = self.socket.recv(128).decode('ascii', 'ignore')
 
-
     def get_altitude(self):
         self.log.debug("get_altitude sent")
         self.socket.sendall("alt=?\r".encode('ascii'))
@@ -69,7 +72,7 @@ class CBPComponent:
 
     def get_mask(self):
         self.socket.sendall("msk=?\r".encode('ascii'))
-        self.mask = self.socket.recv(128).decode('ascii').split("\r")[0]
+        self.mask = self.mask_dictionary.inv[int(self.socket.recv(128).decode('ascii').split("\r")[0])]
 
     def set_mask(self, mask: str):
         self.socket.sendall("new_msk={0:f}".format(self.mask_dictionary[mask]).encode('ascii'))
@@ -86,6 +89,18 @@ class CBPComponent:
     def check_panic_status(self):
         self.socket.sendall("wdpanic=?\r".encode('ascii'))
         self.panic_status = float(self.socket.recv(128).decode('ascii', 'ignore').split('\r')[0])
+
+    def check_auto_park(self):
+        self.socket.sendall("autopark=?\r".encode('ascii'))
+        self.auto_park = float(self.socket.recv(128).decode('ascii', 'ignore').split('\r')[0])
+
+    def check_park(self):
+        self.socket.sendall("park=?\r".encode('ascii'))
+        self.park = float(self.socket.recv(128).decode('ascii', 'ignore').split("\r")[0])
+
+    def set_park(self,park=0):
+        self.socket.sendall("park={0:f}\r".format(park).encode('ascii'))
+        reply = self.socket.recv(128).decode('ascii', 'ignore')
 
     def check_cbp_status(self):
         self.socket.sendall("AAstat=?\r".encode('ascii'))
@@ -109,6 +124,8 @@ class CBPComponent:
     def publish(self):
         self.check_panic_status()
         self.check_cbp_status()
+        self.check_auto_park()
+        self.check_park()
         self.get_cbp_telemetry()
 
 
