@@ -64,7 +64,7 @@ class CBPComponent:
 
     def get_focus(self):
         self.socket.sendall("foc=?\r".encode('ascii'))
-        self.focus = self.socket.recv(128).decode('ascii').split("\r")[0]
+        self.focus = float(self.socket.recv(128).decode('ascii').split("\r")[0])
 
     def change_focus(self,position: int):
         self.socket.sendall("new_foc={0:f}\r".format(position).encode('ascii'))
