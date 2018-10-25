@@ -104,15 +104,15 @@ class CBPComponent:
 
     def check_cbp_status(self):
         self.socket.sendall("AAstat=?\r".encode('ascii'))
-        self.azimuth_status = self.socket.recv(128).decode('ascii', 'ignore')
+        self.azimuth_status = float(self.socket.recv(128).decode('ascii', 'ignore').split("\r")[0])
         self.socket.sendall("ABstat=?\r".encode('ascii'))
-        self.altitude_status = self.socket.recv(128).decode('ascii', 'ignore')
+        self.altitude_status = float(self.socket.recv(128).decode('ascii', 'ignore').split("\r")[0])
         self.socket.sendall("ACstat=?\r".encode('ascii'))
-        self.mask_select_status = self.socket.recv(128).decode('ascii', 'ignore')
+        self.mask_select_status = float(self.socket.recv(128).decode('ascii', 'ignore').split("\r")[0])
         self.socket.sendall("ADstat=?\r".encode('ascii'))
-        self.mask_rotate_status = self.socket.recv(128).decode('ascii', 'ignore')
+        self.mask_rotate_status = float(self.socket.recv(128).decode('ascii', 'ignore').split("\r")[0])
         self.socket.sendall("AEstat=?\r".encode('ascii'))
-        self.focus_status = self.socket.recv(128).decode('ascii', 'ignore')
+        self.focus_status = float(self.socket.recv(128).decode('ascii', 'ignore').split("\r")[0])
 
     def get_cbp_telemetry(self):
         self.get_altitude()
