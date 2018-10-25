@@ -19,7 +19,7 @@ class CBPComponent:
         self.azimuth = None
         self.mask = None
         self.mask_rotation = None
-        self.mask_dictionary = bidict({1:"Bob Hoskins 1",2:"Bob Hoskins 2",3:"Bob Hoskins 3",4:"Bob Hoskins 4",5:"Bob Hoskins 5"})
+        self.mask_dictionary = bidict({1:"Bob Hoskins 1",2:"Bob Hoskins 2",3:"Bob Hoskins 3",4:"Bob Hoskins 4",5:"Bob Hoskins 5",9:"Unknown mask"})
         self.mask_rotation_dictionary = {"Bob Hoskins 1":0,"Bob Hoskins 2":0,"Bob Hoskins 3":0,"Bob Hoskins 4":0,"Bob Hoskins 5":0}
         self.focus = None
         self._address = address
@@ -72,10 +72,10 @@ class CBPComponent:
 
     def get_mask(self):
         self.socket.sendall("msk=?\r".encode('ascii'))
-        self.mask = self.mask_dictionary.inv[int(self.socket.recv(128).decode('ascii').split("\r")[0])]
+        self.mask = self.mask_dictionary.inv[float(self.socket.recv(128).decode('ascii').split("\r")[0])]
 
     def set_mask(self, mask: str):
-        self.socket.sendall("new_msk={0:f}".format(self.mask_dictionary[mask]).encode('ascii'))
+        self.socket.sendall("new_msk={0:f}".format(self.mask_dictionary.inv[mask]).encode('ascii'))
         reply = self.socket.recv(128).decode('ascii', 'ignore')
 
     def get_mask_rotation(self):
