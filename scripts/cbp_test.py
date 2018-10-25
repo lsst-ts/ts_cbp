@@ -62,10 +62,17 @@ async def do_stuff():
     ch.setLevel(logging.DEBUG)
     logger.addHandler(ch)
     logger.info("Starting")
-    cbp_remote = CBPRemote()
-    await cbp_remote.start()
-    await cbp_remote.enable()
-    await cbp_remote.move_altitude(0)
+    cbp_remote = salobj.Remote(SALPY_CBP)
+    start_topic = cbp_remote.cmd_start.DataType()
+    start_ack = await cbp_remote.cmd_start.start(start_topic, timeout=10)
+    logger.info(start_ack.ack.ack)
+    enable_topic = cbp_remote.cmd_enable.DataType()
+    enable_ack = await cbp_remote.cmd_enable.start(enable_topic, timeout=10)
+    logger.info(enable_ack.ack.ack)
+    move_altitude_topic = cbp_remote.cmd_moveAltitude.DataType()
+    move_altitude_topic.altitude = 0
+    move_altitude_ack = await cbp_remote.cmd_moveAltitude.start(move_altitude_topic, timeout=10)
+    logger.info(move_altitude_ack.ack.ack)
     # parser = argh.ArghParser()
     # parser.add_commands(
     #     [cbp_remote.standby,
