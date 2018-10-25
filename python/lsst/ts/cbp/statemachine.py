@@ -7,7 +7,7 @@ import SALPY_CBP
 
 
 class CBPCsc(BaseCsc):
-    def __init__(self, port: str, address: int, frequency: float = 1, initial_state: State = State.STANDBY):
+    def __init__(self, port: str, address: int, frequency: float = 1.5, initial_state: State = State.STANDBY):
         super().__init__(SALPY_CBP)
         self.log = logging.getLogger(__name__)
         self.log.debug("logger initialized")

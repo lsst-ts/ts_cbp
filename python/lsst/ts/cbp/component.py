@@ -131,7 +131,8 @@ class CBPComponent:
 
 def main():
     cbp = CBPComponent("140.252.33.12", 5000)
-    print("")
+    cbp.publish()
+    print(cbp.park)
 
 
 if __name__ == '__main__':
