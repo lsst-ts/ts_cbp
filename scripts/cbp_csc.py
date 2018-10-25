@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from lsst.ts.cbp.statemachine import CBPCsc
 import argh
 import asyncio
