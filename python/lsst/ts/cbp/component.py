@@ -124,8 +124,8 @@ class CBPComponent:
     def publish(self):
         self.check_panic_status()
         self.check_cbp_status()
-        self.check_auto_park()
         self.check_park()
+        self.check_auto_park()
         self.get_cbp_telemetry()
 
 
