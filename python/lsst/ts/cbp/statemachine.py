@@ -91,6 +91,7 @@ class CBPModel:
     def __init__(self,port: str, address: int):
         # TODO: write docstrings
         self._cbp = CBPComponent(port, address)
+        self.publish()
         self.azimuth = self._cbp.azimuth
         self.altitude = self._cbp.altitude
         self.mask = self._cbp.mask
