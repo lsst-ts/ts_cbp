@@ -19,7 +19,7 @@ class CBPComponent:
         self.azimuth = None
         self.mask = None
         self.mask_rotation = None
-        self.mask_dictionary = bidict({1:"Bob Hoskins 1",2:"Bob Hoskins 2",3:"Bob Hoskins 3",4:"Bob Hoskins 4",5:"Bob Hoskins 5",9:"Unknown mask"})
+        self.mask_dictionary = bidict({1.:"Bob Hoskins 1",2.:"Bob Hoskins 2",3.:"Bob Hoskins 3",4.:"Bob Hoskins 4",5.:"Bob Hoskins 5",9.:"Unknown mask"})
         self.mask_rotation_dictionary = {"Bob Hoskins 1":0,"Bob Hoskins 2":0,"Bob Hoskins 3":0,"Bob Hoskins 4":0,"Bob Hoskins 5":0}
         self.focus = None
         self._address = address
