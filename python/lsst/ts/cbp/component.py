@@ -4,13 +4,95 @@ from bidict import bidict
 
 class CBPComponent:
     """
-    This class is for implementing the CBP component
+    This class is for implementing the CBP component.
+
+    The component implements a python wrapper over dmc code written by DFM Manufacturing. The following api exposes
+    commands that move the motors of the CBP, sets the focus and chooses the mask.
 
     Parameters
     ----------
 
     address : str
     port : int
+
+    Attributes
+    ----------
+
+    log: Logger
+        The logger for the component
+
+    socket: Socket
+        The socket that handles the TCP/IP connection for the CBP
+
+    altitude: float
+        The value of the CBP altitude encoder
+
+    azimuth: float
+        The value of the CBP azimuth encoder
+
+    mask: str
+        The current mask as named in the mask_dictionary
+
+    mask_rotation: float
+        The current value of the mask rotation encoder
+
+    mask_dictionary: bidict
+        A bidict that contains key,value pairs that corresponds to a mask int and the name of a mask. Names are subject
+        to change.
+
+    mask_rotation_dictionary: dict
+        A dict that contains key, value pairs which correspond to the mask name to the appropriate rotation for that
+        mask.
+
+    focus: float
+        The current value of the focus encoder.
+
+    panic_status: float
+        The current value of the panic variable in the CBP dmc code. A non-zero value represents a panic state and
+        causes the motors to cease functioning until panic is dealt with or goes away. This status is related to the
+        other statuses.
+
+    auto_park: float
+        The current value of the auto_park variable. If this value is one, that means that CBP suffered a power loss
+        that lasted more than 12 seconds and was on battery back up. The CBP will then park itself automatically, moving
+        azimuth to 0 and altitude to -70 and lock focus and mask. To unpark CBP, the park variable should be set to
+        zero.
+
+    park: float
+        The current value of the park variable. This value can be set to one or zero, if set to one it will park the CBP
+        if set to zero it will unpark.
+
+    azimuth_status: float
+        This is the current value of the status of the azimuth encoder. If this value is non-zero, the encoder has some
+        kind of issue.
+
+    altitude_status: float
+        This is the current value of the status of the altitude encoder. If this value is non-zero, the encoder has some
+        kind of issue.
+
+    mask_select_status: float
+        This is the current value of the status of the mask selection encoder. If this value is non-zero, the encoder
+        has some kind of issue.
+
+    mask_rotate_status: float
+        This is the current value of the status of the mask rotation encoder. If this value is non-zero, the encoder
+        has some kind of issue.
+
+    focus_status: float
+        This is the current value of the status of the focus encoder. If this value is non-zero, the encoder has some
+        kind of issue.
+
+    Warnings
+    --------
+
+    The mask functionality is not quite done being implemented yet. This is because there are no physical masks yet and
+    therefore names are not final.
+
+    Notes
+    -----
+
+    The class uses the python socket module to build TCP/IP connections to the galil controller mounted onto CBP. The
+    underlying api is built on dmc,a language variant of c built by galil for controling motors and such items.
     """
     def __init__(self,address: str, port: int):
         self.log = logging.getLogger(__name__)
@@ -40,69 +122,227 @@ class CBPComponent:
         self.log.info("CBP initialized")
 
     def connect(self):
+        """Creates a socket and connects to the CBP's static address and designated port.
+
+
+
+        Returns
+        -------
+
+        None
+
+        """
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.settimeout(5)
         self.socket.connect((self._address, self._port))
         self.log.debug("CBP connected to {0} on port {1}".format(self._address, self._port))
 
     def get_azimuth(self):
+        """Gets azimuth value from azimuth encoder
+
+        Returns
+        -------
+
+        """
         self.socket.sendall("az=?\r".encode('ascii'))
         self.azimuth = float(self.socket.recv(128).decode('ascii', 'ignore').split("\r")[0])
 
     def move_azimuth(self,position: float):
+        """This moves the horizontal axis to the value sent by the user.
+
+        Parameters
+        ----------
+        position: float
+            This is the value that is sent to the CBP in order to move the horizontal axis.
+
+        Returns
+        -------
+
+        None
+
+        """
         self.socket.sendall("new_az={0:f}\r".format(position).encode('ascii'))
         reply = self.socket.recv(128).decode('ascii', 'ignore')
 
     def get_altitude(self):
+        """This gets the altitude value from the altitude encoder
+
+        Returns
+        -------
+
+        None
+
+        """
         self.log.debug("get_altitude sent")
         self.socket.sendall("alt=?\r".encode('ascii'))
         self.altitude = float(self.socket.recv(128).decode('ascii', 'ignore').split("\r")[0])
 
     def move_altitude(self,position: float):
+        """This moves the vertical axis to the value that the user sent.
+
+        Parameters
+        ----------
+        position: float
+            The value to move the altitude to which is in degrees.
+
+        Returns
+        -------
+
+        None
+
+        """
         self.socket.sendall("new_alt={0:f}\r".format(position).encode('ascii'))
         reply = self.socket.recv(128).decode('ascii', 'ignore')
 
     def get_focus(self):
+        """This gets the value of the focus encoder.
+
+        Returns
+        -------
+
+        None
+
+        """
         self.socket.sendall("foc=?\r".encode('ascii'))
         self.focus = float(self.socket.recv(128).decode('ascii').split("\r")[0])
 
     def change_focus(self,position: int):
+        """This changes the focus to whatever value the user sent.
+
+        Parameters
+        ----------
+        position: int
+            The value of the new focus
+
+        Returns
+        -------
+
+        None
+
+        """
         self.socket.sendall("new_foc={0:f}\r".format(position).encode('ascii'))
         reply = self.socket.recv(128).decode('ascii', 'ignore')
 
     def get_mask(self):
+        """This gets the current mask value from the encoder
+
+        Returns
+        -------
+
+        None
+
+        """
         self.socket.sendall("msk=?\r".encode('ascii'))
         self.mask = self.mask_dictionary[float(self.socket.recv(128).decode('ascii').split("\r")[0])]
 
     def set_mask(self, mask: str):
+        """This sets the mask value
+
+        Parameters
+        ----------
+        mask: str
+            This is the name of the mask which is converted to an int using a dictionary.
+
+        Returns
+        -------
+
+        None
+
+        """
         self.socket.sendall("new_msk={0:f}".format(self.mask_dictionary.inv[mask]).encode('ascii'))
         reply = self.socket.recv(128).decode('ascii', 'ignore')
 
     def get_mask_rotation(self):
+        """This gets the mask rotation value from the encoder
+
+        Returns
+        -------
+
+        None
+
+        """
         self.socket.sendall("rot=?\r".encode('ascii'))
         self.mask_rotation = float(self.socket.recv(128).decode('ascii').split("\r")[0])
 
     def set_mask_rotation(self,mask_rotation: float):
+        """This sets the mask rotation
+
+        Parameters
+        ----------
+        mask_rotation: float
+            The mask_rotation value that will be sent.
+
+        Returns
+        -------
+
+        None
+
+        """
         self.socket.sendall("new_rot={0:f}".format(mask_rotation).encode('ascii'))
         reply = self.socket.recv(128).decode('ascii', 'ignore')
 
     def check_panic_status(self):
+        """Gets the panic variable from CBP
+
+        Returns
+        -------
+
+        None
+
+        """
         self.socket.sendall("wdpanic=?\r".encode('ascii'))
         self.panic_status = float(self.socket.recv(128).decode('ascii', 'ignore').split('\r')[0])
 
     def check_auto_park(self):
+        """Gets the autopark variable from CBP
+
+        Returns
+        -------
+
+        None
+
+        """
         self.socket.sendall("autopark=?\r".encode('ascii'))
         self.auto_park = float(self.socket.recv(128).decode('ascii', 'ignore').split('\r')[0])
 
     def check_park(self):
+        """Gets the park variable from CBP
+
+        Returns
+        -------
+
+        None
+
+        """
         self.socket.sendall("park=?\r".encode('ascii'))
         self.park = float(self.socket.recv(128).decode('ascii', 'ignore').split("\r")[0])
 
     def set_park(self,park=0):
+        """
+
+        Parameters
+        ----------
+        park: int {0,1}
+            A boolean int which tells the CBP to park or not.
+
+        Returns
+        -------
+
+        None
+
+        """
         self.socket.sendall("park={0:f}\r".format(park).encode('ascii'))
         reply = self.socket.recv(128).decode('ascii', 'ignore')
 
     def check_cbp_status(self):
+        """Checks the status of the encoders
+
+        Returns
+        -------
+
+        None
+
+        """
         self.socket.sendall("AAstat=?\r".encode('ascii'))
         self.azimuth_status = float(self.socket.recv(128).decode('ascii', 'ignore').split("\r")[0])
         self.socket.sendall("ABstat=?\r".encode('ascii'))
@@ -115,6 +355,14 @@ class CBPComponent:
         self.focus_status = float(self.socket.recv(128).decode('ascii', 'ignore').split("\r")[0])
 
     def get_cbp_telemetry(self):
+        """Gets the position data of the CBP.
+
+        Returns
+        -------
+
+        None
+
+        """
         self.get_altitude()
         self.get_azimuth()
         self.get_focus()
@@ -122,6 +370,14 @@ class CBPComponent:
         self.get_mask_rotation()
 
     def publish(self):
+        """This updates the attributes within the component
+
+        Returns
+        -------
+
+        None
+
+        """
         self.check_panic_status()
         self.check_cbp_status()
         self.check_park()
@@ -132,7 +388,12 @@ class CBPComponent:
 def main():
     cbp = CBPComponent("140.252.33.12", 5000)
     cbp.publish()
-    print(cbp.park)
+    print(cbp.azimuth)
+    print(cbp.altitude)
+    print(cbp.panic_status)
+    cbp.move_altitude(0)
+    cbp.publish()
+    print(cbp.altitude)
 
 
 if __name__ == '__main__':

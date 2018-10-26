@@ -7,6 +7,55 @@ import SALPY_CBP
 
 
 class CBPCsc(BaseCsc):
+    """This defines the CBP CSC(Commandable SAL Component) using salobj
+
+    Parameters
+    ----------
+    port: str
+        This is the ip address of the CBP.
+
+    address: int
+        This is the port of the CBP
+
+    frequency: float
+        This is the amount of seconds to query the device for telemetry.
+
+    initial_state: salobj.State
+        The initial state of the csc, typically STANDBY or OFFLINE
+
+    Attributes
+    ----------
+
+    log: Logger
+        This is the log for the class
+
+    summary_state: salobj.State
+        This is the current state for the csc
+
+    model: CBPModel
+        This is the model that links the component to the CSC
+
+    frequency: float
+
+    azimuth_topic: salobj.ControllerTelemetry
+        topic for the azimuth telemetry as defined in the xml.
+
+    altitude_topic: salobj.ControllerTelemetry
+        topic for altitude telemetry as defined in the xml.
+
+    mask_topic: salobj.ControllerTelemetry
+        Topic for mask telemetry as defined in the xml.
+
+    focus_topic: salobj.ControllerTelemetry
+        Topic for focus telemetry as defined in the xml.
+
+    status_topic: salobj.ControllerTelemetry
+        Topic for status telemetry as defined in the xml.
+
+    parked_topic: salobj.ControllerTelemetry
+        Topic for parked telemetry as defined in the xml
+
+    """
     def __init__(self, port: str, address: int, frequency: float = 2, initial_state: State = State.STANDBY):
         super().__init__(SALPY_CBP)
         self.log = logging.getLogger(__name__)
@@ -24,6 +73,16 @@ class CBPCsc(BaseCsc):
         asyncio.ensure_future(self.azimuth_telemetry())
 
     async def do_moveAzimuth(self, id_data):
+        """
+
+        Parameters
+        ----------
+        id_data
+
+        Returns
+        -------
+
+        """
         self.log.debug("Begin moveAzimuth")
         self.assert_enabled("moveAzimuth")
         self.model.move_azimuth(id_data.data.azimuth)
@@ -32,6 +91,12 @@ class CBPCsc(BaseCsc):
         await asyncio.sleep(3*1.25)
 
     async def azimuth_telemetry(self):
+        """
+
+        Returns
+        -------
+
+        """
         while True:
             self.log.debug("Begin sending telemetry")
             self.model.publish()
@@ -60,36 +125,104 @@ class CBPCsc(BaseCsc):
             await asyncio.sleep(self.frequency)
 
     async def do_moveAltitude(self,id_data):
+        """
+
+        Parameters
+        ----------
+        id_data
+
+        Returns
+        -------
+
+        """
         self.assert_enabled("moveAltitude")
         self.model.move_altitude(id_data.data.altitude)
         self.cmd_moveAltitude.ackInProgress(id_data, "In progress")
         await asyncio.sleep(3*1.25)
 
     async def do_setFocus(self, id_data):
+        """
+
+        Parameters
+        ----------
+        id_data
+
+        Returns
+        -------
+
+        """
         self.assert_enabled("setFocus")
         self.model.change_focus(id_data.data.focus)
 
     async def do_park(self):
+        """
+
+        Returns
+        -------
+
+        """
         self.assert_enabled("park")
         self.model.park()
 
-    async def do_changeMask(self):
+    async def do_changeMask(self,id_data):
+        """
+
+        Parameters
+        ----------
+        id_data
+
+        Returns
+        -------
+
+        """
         pass # TODO: finish do_changeMask
 
     async def do_clearFault(self, id_data):
+        """
+
+        Parameters
+        ----------
+        id_data
+
+        Returns
+        -------
+
+        """
         pass #TODO: finish clearFault
 
     async def do_enterControl(self, id_data):
+        """
+
+        Parameters
+        ----------
+        id_data
+
+        Returns
+        -------
+
+        """
         pass #TODO: finish enterControl
 
     async def begin_enable(self, id_data):
+        """
+
+        Parameters
+        ----------
+        id_data
+
+        Returns
+        -------
+
+        """
         self.model._cbp.set_park()
 
 
 class CBPModel:
+    """
+
+    """
     # TODO: write docstrings
     def __init__(self,port: str, address: int):
-        # TODO: write docstrings
         self._cbp = CBPComponent(port, address)
         self.publish()
         self.azimuth = self._cbp.azimuth
