@@ -19,9 +19,8 @@ def main(verbose="info"):
     formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s")
     ch.setFormatter(formatter)
     log.addHandler(ch)
-    parser = argh.ArghParser()
     cbp=CBPCsc("140.252.33.12",5000)
-    log.info("CBP initialized")
+    log.info("CBP CSC initialized")
     loop = asyncio.get_event_loop()
     try:
         log.info('Running CSC (Hit ctrl+c to stop it')

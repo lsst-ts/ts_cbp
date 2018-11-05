@@ -1,23 +1,23 @@
 import logging
 import socket
-from bidict import bidict
+from types import SimpleNamespace
+
 
 class CBPComponent:
-    """
-    This class is for implementing the CBP component.
+    """This class is for implementing the CBP component.
 
     The component implements a python wrapper over dmc code written by DFM Manufacturing. The following api exposes
     commands that move the motors of the CBP, sets the focus and chooses the mask.
 
     Parameters
     ----------
-
     address : str
+       The ip address of the CBP galil component
     port : int
+        The port to connect to the CBP galil component
 
     Attributes
     ----------
-
     log: Logger
         The logger for the component
 
@@ -25,27 +25,22 @@ class CBPComponent:
         The socket that handles the TCP/IP connection for the CBP
 
     altitude: float
-        The value of the CBP altitude encoder
+        The value of the CBP altitude encoder in degress.
 
     azimuth: float
-        The value of the CBP azimuth encoder
+        The value of the CBP azimuth encoder in degrees.
 
     mask: str
         The current mask as named in the mask_dictionary
 
     mask_rotation: float
-        The current value of the mask rotation encoder
+        The current value of the mask rotation encoder in degrees.
 
-    mask_dictionary: bidict
-        A bidict that contains key,value pairs that corresponds to a mask int and the name of a mask. Names are subject
-        to change.
-
-    mask_rotation_dictionary: dict
-        A dict that contains key, value pairs which correspond to the mask name to the appropriate rotation for that
-        mask.
+    masks: SimpleNamespace
+        A simplenamespace that contains the mask names and rotation values along with the id.
 
     focus: float
-        The current value of the focus encoder.
+        The current value of the focus encoder in nanometers.
 
     panic_status: float
         The current value of the panic variable in the CBP dmc code. A non-zero value represents a panic state and
@@ -101,8 +96,20 @@ class CBPComponent:
         self.azimuth = None
         self.mask = None
         self.mask_rotation = None
-        self.mask_dictionary = bidict({1.:"Bob Hoskins 1",2.:"Bob Hoskins 2",3.:"Bob Hoskins 3",4.:"Bob Hoskins 4",5.:"Bob Hoskins 5",9.:"Unknown mask"})
-        self.mask_rotation_dictionary = {"Bob Hoskins 1":0,"Bob Hoskins 2":0,"Bob Hoskins 3":0,"Bob Hoskins 4":0,"Bob Hoskins 5":0}
+        self.mask_dictionary ={
+            self.masks.mask1.name:self.masks.mask1,
+            self.masks.mask2.name:self.masks.mask2,
+            self.masks.mask3.name:self.masks.mask3,
+            self.masks.mask4.name:self.masks.mask4,
+            self.masks.mask5.name:self.masks.mask5,
+            self.masks.mask9.name:self.masks.mask9}
+        self.masks = SimpleNamespace(
+            mask1=SimpleNamespace(name="Not a mask 1", rotation=0, id=1.),
+            mask2=SimpleNamespace(name="Not a mask 2", rotation=0, id=2.),
+            mask3=SimpleNamespace(name="Not a mask 3", rotation=0, id=3.),
+            mask4=SimpleNamespace(name="Not a mask 4", rotation=0, id=4.),
+            mask5=SimpleNamespace(name="Not a mask 5", rotation=0, id=5.),
+            mask9=SimpleNamespace(name="Unknown Mask", rotation=0, id=9.))
         self.focus = None
         self._address = address
         self._port = port
@@ -119,23 +126,25 @@ class CBPComponent:
         self.mask_rotate_status = None
         self.focus_status = None
         self.check_cbp_status()
-        self.log.info("CBP initialized")
+        self.log.info("CBP component initialized")
 
     def connect(self):
         """Creates a socket and connects to the CBP's static address and designated port.
 
 
-
         Returns
         -------
-
         None
 
         """
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.settimeout(5)
-        self.socket.connect((self._address, self._port))
-        self.log.debug("CBP connected to {0} on port {1}".format(self._address, self._port))
+        try:
+            self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.socket.settimeout(5)
+            self.socket.connect((self._address, self._port))
+            self.log.debug("CBP connected to {0} on port {1}".format(self._address, self._port))
+        except TimeoutError as te:
+            self.log.error("Socket timed out")
+            raise te
 
     def get_azimuth(self):
         """Gets azimuth value from azimuth encoder
@@ -157,19 +166,20 @@ class CBPComponent:
 
         Returns
         -------
-
         None
 
         """
-        self.socket.sendall("new_az={0:f}\r".format(position).encode('ascii'))
-        reply = self.socket.recv(128).decode('ascii', 'ignore')
+        if position < -45 or position > 45:
+            raise ValueError("New azimuth value exceeds Azimuth limit.")
+        else:
+            self.socket.sendall("new_az={0:f}\r".format(position).encode('ascii'))
+            reply = self.socket.recv(128).decode('ascii', 'ignore')
 
     def get_altitude(self):
         """This gets the altitude value from the altitude encoder
 
         Returns
         -------
-
         None
 
         """
@@ -187,19 +197,20 @@ class CBPComponent:
 
         Returns
         -------
-
         None
 
         """
-        self.socket.sendall("new_alt={0:f}\r".format(position).encode('ascii'))
-        reply = self.socket.recv(128).decode('ascii', 'ignore')
+        if position < -69 or position > 45:
+            raise ValueError("New altitude value exceeds altitude limit.")
+        else:
+            self.socket.sendall("new_alt={0:f}\r".format(position).encode('ascii'))
+            reply = self.socket.recv(128).decode('ascii', 'ignore')
 
     def get_focus(self):
-        """This gets the value of the focus encoder.
+        """This gets the value of the focus encoder. Units: nanometers
 
         Returns
         -------
-
         None
 
         """
@@ -212,28 +223,29 @@ class CBPComponent:
         Parameters
         ----------
         position: int
-            The value of the new focus
+            The value of the new focus in nanometers.
 
         Returns
         -------
-
         None
 
         """
-        self.socket.sendall("new_foc={0:f}\r".format(position).encode('ascii'))
-        reply = self.socket.recv(128).decode('ascii', 'ignore')
+        if position < 0 or position > 13000:
+            raise ValueError("New focus value exceeds focus limit.")
+        else:
+            self.socket.sendall("new_foc={0:f}\r".format(position).encode('ascii'))
+            reply = self.socket.recv(128).decode('ascii', 'ignore')
 
     def get_mask(self):
         """This gets the current mask value from the encoder
 
         Returns
         -------
-
         None
 
         """
         self.socket.sendall("msk=?\r".encode('ascii'))
-        self.mask = self.mask_dictionary[float(self.socket.recv(128).decode('ascii').split("\r")[0])]
+        self.mask = float(self.socket.recv(128).decode('ascii').split("\r")[0])
 
     def set_mask(self, mask: str):
         """This sets the mask value
@@ -245,11 +257,12 @@ class CBPComponent:
 
         Returns
         -------
-
         None
 
         """
-        self.socket.sendall("new_msk={0:f}".format(self.mask_dictionary.inv[mask]).encode('ascii'))
+        if mask not in self.mask_dictionary:
+            raise KeyError("Mask is not in dictionary, name may need to added or changed.")
+        self.socket.sendall("new_msk={0:f}".format(self.mask_dictionary[mask].id).encode('ascii'))
         reply = self.socket.recv(128).decode('ascii', 'ignore')
 
     def get_mask_rotation(self):
@@ -257,7 +270,6 @@ class CBPComponent:
 
         Returns
         -------
-
         None
 
         """
@@ -274,10 +286,11 @@ class CBPComponent:
 
         Returns
         -------
-
         None
 
         """
+        if mask_rotation < 0 or mask_rotation > 360:
+            raise ValueError("New mask rotation value exceeds mask rotation limits.")
         self.socket.sendall("new_rot={0:f}".format(mask_rotation).encode('ascii'))
         reply = self.socket.recv(128).decode('ascii', 'ignore')
 
@@ -286,7 +299,6 @@ class CBPComponent:
 
         Returns
         -------
-
         None
 
         """
@@ -298,7 +310,6 @@ class CBPComponent:
 
         Returns
         -------
-
         None
 
         """
@@ -310,7 +321,6 @@ class CBPComponent:
 
         Returns
         -------
-
         None
 
         """
@@ -327,10 +337,11 @@ class CBPComponent:
 
         Returns
         -------
-
         None
 
         """
+        if park not in [0,1]:
+            raise ValueError("park must be binary value that is either 1 or 0.")
         self.socket.sendall("park={0:f}\r".format(park).encode('ascii'))
         reply = self.socket.recv(128).decode('ascii', 'ignore')
 
@@ -339,7 +350,6 @@ class CBPComponent:
 
         Returns
         -------
-
         None
 
         """
@@ -359,7 +369,6 @@ class CBPComponent:
 
         Returns
         -------
-
         None
 
         """
@@ -374,7 +383,6 @@ class CBPComponent:
 
         Returns
         -------
-
         None
 
         """

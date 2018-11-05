@@ -25,7 +25,6 @@ class CBPCsc(BaseCsc):
 
     Attributes
     ----------
-
     log: Logger
         This is the log for the class
 
@@ -38,31 +37,33 @@ class CBPCsc(BaseCsc):
     frequency: float
 
     azimuth_topic: salobj.ControllerTelemetry
-        topic for the azimuth telemetry as defined in the xml.
+        topic for the azimuth telemetry as defined in the XML.
 
     altitude_topic: salobj.ControllerTelemetry
-        topic for altitude telemetry as defined in the xml.
+        topic for altitude telemetry as defined in the XML.
 
     mask_topic: salobj.ControllerTelemetry
-        Topic for mask telemetry as defined in the xml.
+        Topic for mask telemetry as defined in the XML.
 
     focus_topic: salobj.ControllerTelemetry
-        Topic for focus telemetry as defined in the xml.
+        Topic for focus telemetry as defined in the XML.
 
     status_topic: salobj.ControllerTelemetry
-        Topic for status telemetry as defined in the xml.
+        Topic for status telemetry as defined in the XML.
 
     parked_topic: salobj.ControllerTelemetry
-        Topic for parked telemetry as defined in the xml
+        Topic for parked telemetry as defined in the XML.
 
     """
-    def __init__(self, port: str, address: int, frequency: float = 2, initial_state: State = State.STANDBY):
+    def __init__(self, port: str, address: int, frequency: float = 2, initial_state: State = State.STANDBY, speed=3.5,factor=1.25):
         super().__init__(SALPY_CBP)
         self.log = logging.getLogger(__name__)
         self.log.debug("logger initialized")
         self.summary_state = initial_state
         self.model = CBPModel(port, address)
         self.frequency = frequency
+        self.cbp_speed = speed
+        self.factor = factor
         self.log.info("CBP CSC initialized")
         self.azimuth_topic = self.tel_azimuth.DataType()
         self.altitude_topic = self.tel_altitude.DataType()
@@ -88,7 +89,7 @@ class CBPCsc(BaseCsc):
         self.model.move_azimuth(id_data.data.azimuth)
         self.log.debug("moveAzimuth sent to model")
         self.cmd_moveAzimuth.ackInProgress(id_data, "In progress")
-        await asyncio.sleep(3*1.25)
+        await asyncio.sleep(self.cbp_speed*self.factor)
 
     async def azimuth_telemetry(self):
         """
@@ -138,7 +139,7 @@ class CBPCsc(BaseCsc):
         self.assert_enabled("moveAltitude")
         self.model.move_altitude(id_data.data.altitude)
         self.cmd_moveAltitude.ackInProgress(id_data, "In progress")
-        await asyncio.sleep(3*1.25)
+        await asyncio.sleep(self.cbp_speed*self.factor)
 
     async def do_setFocus(self, id_data):
         """

@@ -62,28 +62,19 @@ async def do_stuff():
     ch.setLevel(logging.DEBUG)
     logger.addHandler(ch)
     logger.info("Starting")
-    cbp_remote = salobj.Remote(SALPY_CBP)
-    start_topic = cbp_remote.cmd_start.DataType()
-    start_ack = await cbp_remote.cmd_start.start(start_topic, timeout=10)
-    logger.info(start_ack.ack.ack)
-    enable_topic = cbp_remote.cmd_enable.DataType()
-    enable_ack = await cbp_remote.cmd_enable.start(enable_topic, timeout=10)
-    logger.info(enable_ack.ack.ack)
-    move_altitude_topic = cbp_remote.cmd_moveAltitude.DataType()
-    move_altitude_topic.altitude = 0
-    move_altitude_ack = await cbp_remote.cmd_moveAltitude.start(move_altitude_topic, timeout=10)
-    logger.info(move_altitude_ack.ack.ack)
-    # parser = argh.ArghParser()
-    # parser.add_commands(
-    #     [cbp_remote.standby,
-    #      cbp_remote.start,
-    #      cbp_remote.disable,
-    #      cbp_remote.enable,
-    #      cbp_remote.move_altitude,
-    #      cbp_remote.move_azimuth,
-    #      cbp_remote.set_focus,
-    #      cbp_remote.park])
-    # parser.dispatch()
+    cbp_remote = CBPRemote()
+
+    parser = argh.ArghParser()
+    parser.add_commands(
+        [cbp_remote.standby,
+         cbp_remote.start,
+         cbp_remote.disable,
+         cbp_remote.enable,
+         cbp_remote.move_altitude,
+         cbp_remote.move_azimuth,
+         cbp_remote.set_focus,
+         cbp_remote.park])
+    parser.dispatch()
 
 if __name__ == '__main__':
     asyncio.get_event_loop().run_until_complete(do_stuff())
