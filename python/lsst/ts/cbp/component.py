@@ -111,7 +111,7 @@ class CBPComponent:
             self.masks.mask5.name:self.masks.mask5,
             self.masks.mask9.name:self.masks.mask9}
         self.mask_id_dictionary = {
-            self.mask.mask9.id:self.masks.mask9
+            self.masks.mask9.id:self.masks.mask9
         }
         self.focus = None
         self._address = address
