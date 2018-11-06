@@ -96,13 +96,6 @@ class CBPComponent:
         self.azimuth = None
         self.mask = None
         self.mask_rotation = None
-        self.mask_dictionary ={
-            self.masks.mask1.name:self.masks.mask1,
-            self.masks.mask2.name:self.masks.mask2,
-            self.masks.mask3.name:self.masks.mask3,
-            self.masks.mask4.name:self.masks.mask4,
-            self.masks.mask5.name:self.masks.mask5,
-            self.masks.mask9.name:self.masks.mask9}
         self.masks = SimpleNamespace(
             mask1=SimpleNamespace(name="Not a mask 1", rotation=0, id=1.),
             mask2=SimpleNamespace(name="Not a mask 2", rotation=0, id=2.),
@@ -110,6 +103,13 @@ class CBPComponent:
             mask4=SimpleNamespace(name="Not a mask 4", rotation=0, id=4.),
             mask5=SimpleNamespace(name="Not a mask 5", rotation=0, id=5.),
             mask9=SimpleNamespace(name="Unknown Mask", rotation=0, id=9.))
+        self.mask_dictionary ={
+            self.masks.mask1.name:self.masks.mask1,
+            self.masks.mask2.name:self.masks.mask2,
+            self.masks.mask3.name:self.masks.mask3,
+            self.masks.mask4.name:self.masks.mask4,
+            self.masks.mask5.name:self.masks.mask5,
+            self.masks.mask9.name:self.masks.mask9}
         self.focus = None
         self._address = address
         self._port = port
