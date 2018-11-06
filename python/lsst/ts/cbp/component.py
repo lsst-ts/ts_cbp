@@ -252,7 +252,7 @@ class CBPComponent:
 
         """
         self.socket.sendall("msk=?\r".encode('ascii'))
-        self.mask = self.mask_id_dictionary[float(self.parse_reply())]
+        self.mask = self.mask_id_dictionary[float(self.parse_reply())].name
 
     def set_mask(self, mask: str):
         """This sets the mask value
