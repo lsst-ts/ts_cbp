@@ -40,7 +40,7 @@ class CBPComponent:
         A simplenamespace that contains the mask names and rotation values along with the id.
 
     focus: float
-        The current value of the focus encoder in nanometers.
+        The current value of the focus encoder in microns.
 
     panic_status: float
         The current value of the panic variable in the CBP dmc code. A non-zero value represents a panic state and
@@ -128,6 +128,10 @@ class CBPComponent:
         self.check_cbp_status()
         self.log.info("CBP component initialized")
 
+    def parse_reply(self):
+        parsed_reply = self.socket.recv(128).decode('ascii').split("\r")[0]
+        return parsed_reply
+
     def connect(self):
         """Creates a socket and connects to the CBP's static address and designated port.
 
@@ -154,9 +158,9 @@ class CBPComponent:
 
         """
         self.socket.sendall("az=?\r".encode('ascii'))
-        self.azimuth = float(self.socket.recv(128).decode('ascii', 'ignore').split("\r")[0])
+        self.azimuth = float(self.parse_reply())
 
-    def move_azimuth(self,position: float):
+    def move_azimuth(self, position: float):
         """This moves the horizontal axis to the value sent by the user.
 
         Parameters
@@ -185,7 +189,7 @@ class CBPComponent:
         """
         self.log.debug("get_altitude sent")
         self.socket.sendall("alt=?\r".encode('ascii'))
-        self.altitude = float(self.socket.recv(128).decode('ascii', 'ignore').split("\r")[0])
+        self.altitude = float(self.parse_reply())
 
     def move_altitude(self,position: float):
         """This moves the vertical axis to the value that the user sent.
@@ -215,7 +219,7 @@ class CBPComponent:
 
         """
         self.socket.sendall("foc=?\r".encode('ascii'))
-        self.focus = float(self.socket.recv(128).decode('ascii').split("\r")[0])
+        self.focus = float(self.parse_reply())
 
     def change_focus(self,position: int):
         """This changes the focus to whatever value the user sent.
@@ -245,7 +249,7 @@ class CBPComponent:
 
         """
         self.socket.sendall("msk=?\r".encode('ascii'))
-        self.mask = float(self.socket.recv(128).decode('ascii').split("\r")[0])
+        self.mask = float(self.parse_reply())
 
     def set_mask(self, mask: str):
         """This sets the mask value
@@ -274,7 +278,7 @@ class CBPComponent:
 
         """
         self.socket.sendall("rot=?\r".encode('ascii'))
-        self.mask_rotation = float(self.socket.recv(128).decode('ascii').split("\r")[0])
+        self.mask_rotation = float(self.parse_reply())
 
     def set_mask_rotation(self,mask_rotation: float):
         """This sets the mask rotation
@@ -303,7 +307,7 @@ class CBPComponent:
 
         """
         self.socket.sendall("wdpanic=?\r".encode('ascii'))
-        self.panic_status = float(self.socket.recv(128).decode('ascii', 'ignore').split('\r')[0])
+        self.panic_status = float(self.parse_reply())
 
     def check_auto_park(self):
         """Gets the autopark variable from CBP
@@ -314,7 +318,7 @@ class CBPComponent:
 
         """
         self.socket.sendall("autopark=?\r".encode('ascii'))
-        self.auto_park = float(self.socket.recv(128).decode('ascii', 'ignore').split('\r')[0])
+        self.auto_park = float(self.parse_reply())
 
     def check_park(self):
         """Gets the park variable from CBP
@@ -325,7 +329,7 @@ class CBPComponent:
 
         """
         self.socket.sendall("park=?\r".encode('ascii'))
-        self.park = float(self.socket.recv(128).decode('ascii', 'ignore').split("\r")[0])
+        self.park = float(self.parse_reply())
 
     def set_park(self,park=0):
         """
@@ -354,15 +358,15 @@ class CBPComponent:
 
         """
         self.socket.sendall("AAstat=?\r".encode('ascii'))
-        self.azimuth_status = float(self.socket.recv(128).decode('ascii', 'ignore').split("\r")[0])
+        self.azimuth_status = float(self.parse_reply())
         self.socket.sendall("ABstat=?\r".encode('ascii'))
-        self.altitude_status = float(self.socket.recv(128).decode('ascii', 'ignore').split("\r")[0])
+        self.altitude_status = float(self.parse_reply())
         self.socket.sendall("ACstat=?\r".encode('ascii'))
-        self.mask_select_status = float(self.socket.recv(128).decode('ascii', 'ignore').split("\r")[0])
+        self.mask_select_status = float(self.parse_reply())
         self.socket.sendall("ADstat=?\r".encode('ascii'))
-        self.mask_rotate_status = float(self.socket.recv(128).decode('ascii', 'ignore').split("\r")[0])
+        self.mask_rotate_status = float(self.parse_reply())
         self.socket.sendall("AEstat=?\r".encode('ascii'))
-        self.focus_status = float(self.socket.recv(128).decode('ascii', 'ignore').split("\r")[0])
+        self.focus_status = float(self.parse_reply())
 
     def get_cbp_telemetry(self):
         """Gets the position data of the CBP.
