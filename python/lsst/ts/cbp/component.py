@@ -110,6 +110,9 @@ class CBPComponent:
             self.masks.mask4.name:self.masks.mask4,
             self.masks.mask5.name:self.masks.mask5,
             self.masks.mask9.name:self.masks.mask9}
+        self.mask_id_dictionary = {
+            self.mask.mask9.id:self.masks.mask9
+        }
         self.focus = None
         self._address = address
         self._port = port
@@ -249,7 +252,7 @@ class CBPComponent:
 
         """
         self.socket.sendall("msk=?\r".encode('ascii'))
-        self.mask = float(self.parse_reply())
+        self.mask = self.mask_id_dictionary[float(self.parse_reply())]
 
     def set_mask(self, mask: str):
         """This sets the mask value
