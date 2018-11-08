@@ -6,8 +6,9 @@ from types import SimpleNamespace
 class CBPComponent:
     """This class is for implementing the CBP component.
 
-    The component implements a python wrapper over dmc code written by DFM Manufacturing. The following api exposes
-    commands that move the motors of the CBP, sets the focus and chooses the mask.
+    The component implements a python wrapper over dmc code[which is the language that the Galil controller uses]
+    written by DFM Manufacturing. The following api exposes commands that move the motors of the CBP, sets the focus
+    and chooses the mask.
 
     Parameters
     ----------
@@ -87,7 +88,7 @@ class CBPComponent:
     -----
 
     The class uses the python socket module to build TCP/IP connections to the galil controller mounted onto CBP. The
-    underlying api is built on dmc,a language variant of c built by galil for controling motors and such items.
+    underlying api is built on dmc,a language variant of c built by galil for controlling motors and such items.
     """
     def __init__(self,address: str, port: int):
         self.log = logging.getLogger(__name__)
@@ -103,15 +104,15 @@ class CBPComponent:
             mask4=SimpleNamespace(name="Not a mask 4", rotation=0, id=4.),
             mask5=SimpleNamespace(name="Not a mask 5", rotation=0, id=5.),
             mask9=SimpleNamespace(name="Unknown Mask", rotation=0, id=9.))
-        self.mask_dictionary ={
-            self.masks.mask1.name:self.masks.mask1,
-            self.masks.mask2.name:self.masks.mask2,
-            self.masks.mask3.name:self.masks.mask3,
-            self.masks.mask4.name:self.masks.mask4,
-            self.masks.mask5.name:self.masks.mask5,
-            self.masks.mask9.name:self.masks.mask9}
+        self.mask_dictionary = {
+            self.masks.mask1.name: self.masks.mask1,
+            self.masks.mask2.name: self.masks.mask2,
+            self.masks.mask3.name: self.masks.mask3,
+            self.masks.mask4.name: self.masks.mask4,
+            self.masks.mask5.name: self.masks.mask5,
+            self.masks.mask9.name: self.masks.mask9}
         self.mask_id_dictionary = {
-            self.masks.mask9.id:self.masks.mask9
+            self.masks.mask9.id: self.masks.mask9
         }
         self.focus = None
         self._address = address
@@ -154,7 +155,7 @@ class CBPComponent:
             raise te
 
     def get_azimuth(self):
-        """Gets azimuth value from azimuth encoder
+        """Gets azimuth value from azimuth encoder which is in degrees.
 
         Returns
         -------
@@ -169,7 +170,7 @@ class CBPComponent:
         Parameters
         ----------
         position: float
-            This is the value that is sent to the CBP in order to move the horizontal axis.
+            This is the value in degrees that is sent to the CBP in order to move the horizontal axis.
 
         Returns
         -------
@@ -214,7 +215,7 @@ class CBPComponent:
             reply = self.socket.recv(128).decode('ascii', 'ignore')
 
     def get_focus(self):
-        """This gets the value of the focus encoder. Units: nanometers
+        """This gets the value of the focus encoder. Units: microns
 
         Returns
         -------
@@ -230,7 +231,7 @@ class CBPComponent:
         Parameters
         ----------
         position: int
-            The value of the new focus in nanometers.
+            The value of the new focus in microns.
 
         Returns
         -------
@@ -244,7 +245,7 @@ class CBPComponent:
             reply = self.socket.recv(128).decode('ascii', 'ignore')
 
     def get_mask(self):
-        """This gets the current mask value from the encoder
+        """This gets the current mask value from the encoder which is converted into the name of the mask.
 
         Returns
         -------
@@ -273,7 +274,7 @@ class CBPComponent:
         reply = self.socket.recv(128).decode('ascii', 'ignore')
 
     def get_mask_rotation(self):
-        """This gets the mask rotation value from the encoder
+        """This gets the mask rotation value from the encoder which is in degrees.
 
         Returns
         -------

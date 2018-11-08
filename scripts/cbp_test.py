@@ -3,7 +3,6 @@ import salobj
 import SALPY_CBP
 import asyncio
 import logging
-import argh
 
 
 class CBPRemote():
@@ -49,32 +48,20 @@ class CBPRemote():
         set_focus_ack = await self.remote.cmd_setFocus.start(set_focus_topic,timeout=10)
         self.log.info(set_focus_ack.ack.ack)
 
+    async def change_mask(self, mask):
+        change_mask_topic = self.remote.cmd_changeMask.DataType()
+        change_mask_topic.mask = mask
+        change_mask_ack = await self.remote.cmd_changeMask.start()
+
     async def park(self):
         park_topic = self.remote.cmd_park.DataType()
         park_ack = await self.remote.cmd_park.start(park_topic,timeout=10)
         self.log.info(park_ack.ack.ack)
 
 
-async def do_stuff():
-    logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
-    ch = logging.StreamHandler()
-    ch.setLevel(logging.DEBUG)
-    logger.addHandler(ch)
-    logger.info("Starting")
+async def main():
     cbp_remote = CBPRemote()
-
-    parser = argh.ArghParser()
-    parser.add_commands(
-        [cbp_remote.standby,
-         cbp_remote.start,
-         cbp_remote.disable,
-         cbp_remote.enable,
-         cbp_remote.move_altitude,
-         cbp_remote.move_azimuth,
-         cbp_remote.set_focus,
-         cbp_remote.park])
-    parser.dispatch()
+    await cbp_remote.enable()
 
 if __name__ == '__main__':
-    asyncio.get_event_loop().run_until_complete(do_stuff())
+    asyncio.get_event_loop().run_until_complete(main())

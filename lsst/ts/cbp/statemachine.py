@@ -176,7 +176,9 @@ class CBPCsc(BaseCsc):
         -------
 
         """
-        pass # TODO: finish do_changeMask
+        self.assert_enabled("changeMask")
+        self.model.change_mask(id_data.data.mask)
+        # TODO: finish do_changeMask
 
     async def do_clearFault(self, id_data):
         """
@@ -250,7 +252,10 @@ class CBPModel:
 
     def change_mask(self, mask: str):
         # TODO: write docstrings
-        pass # TODO: write change_mask function
+        mask_rotation = self._cbp.mask_dictionary[mask].rotation
+        self._cbp.set_mask(mask)
+        self._cbp.set_mask_rotation(mask_rotation)
+        # TODO: write change_mask function
 
     def change_focus(self, focus: int):
         # TODO: write docstrings
