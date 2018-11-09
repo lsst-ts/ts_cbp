@@ -2,18 +2,22 @@
 from lsst.ts.cbp.statemachine import CBPCsc
 import argh
 import asyncio
-import sys
 import logging
+import argparse
 logging.captureWarnings(True)
 
-@argh.arg('-v','--verbose',choices=['info','debug'])
-def main(verbose="info"):
+
+@argh.arg('-ll','--log-level',choices=['info','debug'])
+def start(log_level="info"):
+    """Starts the CSC.
+
+    """
     log = logging.getLogger()
     ch = logging.StreamHandler()
-    if verbose == "info":
+    if log_level == "info":
         log.setLevel(logging.INFO)
         ch.setLevel(logging.INFO)
-    elif verbose == "debug":
+    elif log_level == "debug":
         log.setLevel(logging.DEBUG)
         ch.setLevel(logging.DEBUG)
     formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s")
@@ -25,7 +29,7 @@ def main(verbose="info"):
     try:
         log.info('Running CSC (Hit ctrl+c to stop it')
         loop.run_forever()
-    except KeyboardInterrupt as e:
+    except KeyboardInterrupt as kbe:
         log.info("Stopping CBP CSC")
     except Exception as e:
         log.error(e)
@@ -33,6 +37,17 @@ def main(verbose="info"):
         loop.close()
 
 
+def create_parser():
+    parser = argparse.ArgumentParser()
+    argh.set_default_command(parser,start)
+    return parser
+
+
+def main():
+    parser = create_parser()
+    argh.dispatch(parser)
+
+
 
 if __name__ == '__main__':
-    argh.dispatch_command(main)
+    main()

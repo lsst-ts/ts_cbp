@@ -1,9 +1,13 @@
+"""This module contains the logic for the CSC for CBP.
+
+"""
 import logging
 from lsst.ts.cbp.component import CBPComponent
 import asyncio
 from salobj.base_csc import BaseCsc
 from salobj import State
 import SALPY_CBP
+import salobj
 
 
 class CBPCsc(BaseCsc):
@@ -25,16 +29,17 @@ class CBPCsc(BaseCsc):
 
     Attributes
     ----------
-    log: Logger
-        This is the log for the class
+    log: logging.Logger
+        This is the log for the class.
 
     summary_state: salobj.State
-        This is the current state for the csc
+        This is the current state for the csc.
 
     model: CBPModel
-        This is the model that links the component to the CSC
+        This is the model that links the component to the CSC.
 
     frequency: float
+        The amount of time in seconds to wait for querying the device.
 
     azimuth_topic: salobj.ControllerTelemetry
         topic for the azimuth telemetry as defined in the XML.
@@ -74,7 +79,7 @@ class CBPCsc(BaseCsc):
         asyncio.ensure_future(self.azimuth_telemetry())
 
     async def do_moveAzimuth(self, id_data):
-        """
+        """Moves the azimuth axis of the CBP.
 
         Parameters
         ----------
@@ -82,6 +87,7 @@ class CBPCsc(BaseCsc):
 
         Returns
         -------
+        None
 
         """
         self.log.debug("Begin moveAzimuth")
@@ -92,10 +98,11 @@ class CBPCsc(BaseCsc):
         await asyncio.sleep(self.cbp_speed*self.factor)
 
     async def azimuth_telemetry(self):
-        """
+        """Actually updates all of the sal telemetry objects.
 
         Returns
         -------
+        None
 
         """
         while True:
@@ -126,7 +133,7 @@ class CBPCsc(BaseCsc):
             await asyncio.sleep(self.frequency)
 
     async def do_moveAltitude(self,id_data):
-        """
+        """Moves the altitude axis of the CBP.
 
         Parameters
         ----------
@@ -134,6 +141,7 @@ class CBPCsc(BaseCsc):
 
         Returns
         -------
+        None
 
         """
         self.assert_enabled("moveAltitude")
@@ -142,7 +150,7 @@ class CBPCsc(BaseCsc):
         await asyncio.sleep(self.cbp_speed*self.factor)
 
     async def do_setFocus(self, id_data):
-        """
+        """Sets the focus.
 
         Parameters
         ----------
@@ -150,23 +158,25 @@ class CBPCsc(BaseCsc):
 
         Returns
         -------
+        None
 
         """
         self.assert_enabled("setFocus")
         self.model.change_focus(id_data.data.focus)
 
     async def do_park(self):
-        """
+        """Parks the CBP.
 
         Returns
         -------
+        None
 
         """
         self.assert_enabled("park")
         self.model.park()
 
     async def do_changeMask(self,id_data):
-        """
+        """Changes the mask.
 
         Parameters
         ----------
@@ -174,11 +184,11 @@ class CBPCsc(BaseCsc):
 
         Returns
         -------
+        None
 
         """
         self.assert_enabled("changeMask")
         self.model.change_mask(id_data.data.mask)
-        # TODO: finish do_changeMask
 
     async def do_clearFault(self, id_data):
         """
@@ -189,9 +199,10 @@ class CBPCsc(BaseCsc):
 
         Returns
         -------
+        None
 
         """
-        pass #TODO: finish clearFault
+        pass # TODO: finish clearFault
 
     async def do_enterControl(self, id_data):
         """
@@ -202,12 +213,13 @@ class CBPCsc(BaseCsc):
 
         Returns
         -------
+        None
 
         """
         pass #TODO: finish enterControl
 
     async def begin_enable(self, id_data):
-        """
+        """Overrides the begin_enable function in salobj.BaseCsc to make sure the CBP is unparked.
 
         Parameters
         ----------
@@ -215,14 +227,198 @@ class CBPCsc(BaseCsc):
 
         Returns
         -------
+        None
 
         """
         self.model._cbp.set_park()
 
 
-class CBPModel:
-    """
+class CBPRemote:
+    """This the class that implements the remote functionality for the CBP CSC.
 
+    Attributes
+    ----------
+    remote: salobj.Remote
+        The salobj remote that is used to send commands and receive events and telemetry.
+
+    log: logging.Logger
+        This is the log for the current class.
+
+    """
+    def __init__(self):
+        self.remote = salobj.Remote(SALPY_CBP)
+        self.log = logging.getLogger(__name__)
+
+    async def standby(self):
+        """Calls and awaits the standby command. Logs the acknowledgement code from the command.
+
+        Returns
+        -------
+        None
+
+        """
+        standby_topic = self.remote.cmd_standby.DataType()
+        standby_ack = await self.remote.cmd_standby.start(standby_topic,timeout=10)
+        self.log.info(standby_ack.ack.ack)
+
+    async def disable(self):
+        """Calls and awaits the disable command and logs the acknowledgement code.
+
+        Returns
+        -------
+        None
+
+        """
+        disable_topic = self.remote.cmd_disable.DataType()
+        disable_ack = await self.remote.cmd_disable.start(disable_topic,timeout=10)
+        self.log.info(disable_ack.ack.ack)
+
+    async def start(self):
+        """Calls the start and awaits the result and logs the acknowledgement code.
+
+        Returns
+        -------
+        None
+
+        """
+        start_topic = self.remote.cmd_start.DataType()
+        start_ack = await self.remote.cmd_start.start(start_topic,timeout=10)
+        self.log.info(start_ack.ack.ack)
+
+    async def enable(self):
+        """Calls the enable command and awaits the result which logs the acknowledgement code.
+
+        Returns
+        -------
+        None
+
+        """
+        enable_topic = self.remote.cmd_enable.DataType()
+        enable_ack = await self.remote.cmd_enable.start(enable_topic,timeout=10)
+        self.log.info(enable_ack.ack.ack)
+
+    async def move_azimuth(self, azimuth):
+        """Calls the moveAzimuth command and awaits the result which logs the acknowledgement code.
+
+        Parameters
+        ----------
+        azimuth: float
+            The value of the azimuth to move to in degrees.
+
+        Returns
+        -------
+        None
+
+        """
+        move_azimuth_topic = self.remote.cmd_moveAzimuth.DataType()
+        move_azimuth_topic.azimuth = azimuth
+        move_azimuth_ack = await self.remote.cmd_moveAzimuth.start(move_azimuth_topic,timeout=10)
+        self.log.info(move_azimuth_ack.ack.ack)
+
+    async def move_altitude(self, altitude):
+        """Calls the moveAltitude command and awaits and logs the acknowledgement code.
+
+        Parameters
+        ----------
+        altitude: int
+            The altitude in degrees to move CBP to.
+
+        Returns
+        -------
+        None
+
+        """
+        move_altitude_topic = self.remote.cmd_moveAltitude.DataType()
+        move_altitude_topic.altitude = altitude
+        move_altitude_ack = await self.remote.cmd_moveAltitude.start(move_altitude_topic,timeout=10)
+        self.log.info(move_altitude_ack.ack.ack)
+
+    async def set_focus(self,focus):
+        """Sends the setFocus command and awaits and logs the acknowledgement code.
+
+        Parameters
+        ----------
+        focus: int
+            The focus in microns to set the focus encoder to.
+
+        Returns
+        -------
+        None
+
+        """
+        set_focus_topic = self.remote.cmd_setFocus.DataType()
+        set_focus_topic.focus = focus
+        set_focus_ack = await self.remote.cmd_setFocus.start(set_focus_topic,timeout=10)
+        self.log.info(set_focus_ack.ack.ack)
+
+    async def change_mask(self, mask):
+        """Calls the changeMask command and awaits and logs the acknowledgement code.
+
+        Parameters
+        ----------
+        mask: str
+            The string of the mask name to change to.
+        Returns
+        -------
+        None
+
+        """
+        change_mask_topic = self.remote.cmd_changeMask.DataType()
+        change_mask_topic.mask = mask
+        change_mask_ack = await self.remote.cmd_changeMask.start()
+        self.log.info(change_mask_ack.ack.ack)
+
+    async def park(self):
+        """Calls the park command and awaits and logs the acknowledgement code.
+
+        Returns
+        -------
+        None
+
+        """
+        park_topic = self.remote.cmd_park.DataType()
+        park_ack = await self.remote.cmd_park.start(park_topic,timeout=10)
+        self.log.info(park_ack.ack.ack)
+
+
+class CBPModel:
+    """This is the model that connects the CSC and the component together.
+
+    Parameters
+    ----------
+    port: str
+        The ip address of the CBP.
+    address: int
+        The port of the CBP.
+
+    Attributes
+    ----------
+    azimuth: float
+        The last updated position of the azimuth encoder
+    altitude: float
+        The last updated position of the altitude encoder
+    mask: str
+        The last updated mask name of the mask encoder.
+    mask_rotation: float
+        The last updated mask rotation of the rotation encoder.
+    focus: float
+        The last updated focus of the focus encoder.
+    panic_status: int
+        The last updated panic_status of the status byte.
+    azimuth_status: int
+        The last updated azimuth_status of the status byte.
+    altitude_status: int
+        The last updated altitude_status of the status byte.
+    mask_status: int
+        The last updated mask_status of the status byte.
+    mask_rotation_status: int
+        The last updated mask_rotation_status of the status byte.
+    focus_status: int
+        The last updated focus_status of the status byte.
+    auto_parked: int
+        The last updated auto_parked attribute.
+    parked: int
+        The last updated parked attribute.
     """
     # TODO: write docstrings
     def __init__(self,port: str, address: int):
@@ -243,14 +439,50 @@ class CBPModel:
         self.parked = self._cbp.park
 
     def move_azimuth(self, azimuth: float):
+        """Calls the move_azimuth function of the component.
+
+        Parameters
+        ----------
+        azimuth: float
+            The azimuth in degrees to move to.
+
+        Returns
+        -------
+        None
+
+        """
         # TODO: write docstrings
         self._cbp.move_azimuth(azimuth)
 
     def move_altitude(self, altitude: float):
+        """Calls the move_altitude function of the component.
+
+        Parameters
+        ----------
+        altitude: float
+            The altitude in degrees to move CBP to.
+
+        Returns
+        -------
+        None
+
+        """
         # TODO: write docstrings
         self._cbp.move_altitude(altitude)
 
     def change_mask(self, mask: str):
+        """Calls the change_mask function of the component.
+
+        Parameters
+        ----------
+        mask: str
+            The name of the mask to change to.
+
+        Returns
+        -------
+        None
+
+        """
         # TODO: write docstrings
         mask_rotation = self._cbp.mask_dictionary[mask].rotation
         self._cbp.set_mask(mask)
@@ -258,12 +490,38 @@ class CBPModel:
         # TODO: write change_mask function
 
     def change_focus(self, focus: int):
+        """Calls the change_focus function of the CBP component,
+
+        Parameters
+        ----------
+        focus: int
+            The focus in microns to change to.
+
+        Returns
+        -------
+        None
+
+        """
         # TODO: write docstrings
         self._cbp.change_focus(focus)
 
     def park(self):
+        """Calls the park function of the component.
+
+        Returns
+        -------
+        None
+
+        """
         self._cbp.set_park(1)
 
     def publish(self):
+        """Calls the publish function of the component.
+
+        Returns
+        -------
+        NOne
+
+        """
         # TODO: write docstrings
         self._cbp.publish()

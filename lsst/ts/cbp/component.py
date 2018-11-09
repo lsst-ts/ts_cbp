@@ -1,3 +1,6 @@
+"""This module is for implementing the component logic for CBP.
+
+"""
 import logging
 import socket
 from types import SimpleNamespace
@@ -19,10 +22,10 @@ class CBPComponent:
 
     Attributes
     ----------
-    log: Logger
+    log: logging.Logger
         The logger for the component
 
-    socket: Socket
+    socket: socket.Socket
         The socket that handles the TCP/IP connection for the CBP
 
     altitude: float
@@ -133,6 +136,14 @@ class CBPComponent:
         self.log.info("CBP component initialized")
 
     def parse_reply(self):
+        """Parses the reply to remove the carriage return and new line.
+
+        Returns
+        -------
+        str
+            The reply that was parsed.
+
+        """
         parsed_reply = self.socket.recv(128).decode('ascii').split("\r")[0]
         return parsed_reply
 
@@ -143,6 +154,7 @@ class CBPComponent:
         Returns
         -------
         None
+            Nothing
 
         """
         try:
@@ -335,8 +347,8 @@ class CBPComponent:
         self.socket.sendall("park=?\r".encode('ascii'))
         self.park = float(self.parse_reply())
 
-    def set_park(self,park=0):
-        """
+    def set_park(self, park: int=0):
+        """A function that tells the CBP to park or unpark depending on the value given.
 
         Parameters
         ----------
@@ -354,7 +366,7 @@ class CBPComponent:
         reply = self.socket.recv(128).decode('ascii', 'ignore')
 
     def check_cbp_status(self):
-        """Checks the status of the encoders
+        """Checks the status of the encoders.
 
         Returns
         -------
@@ -387,7 +399,7 @@ class CBPComponent:
         self.get_mask_rotation()
 
     def publish(self):
-        """This updates the attributes within the component
+        """This updates the attributes within the component.
 
         Returns
         -------
