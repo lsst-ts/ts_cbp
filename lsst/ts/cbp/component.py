@@ -196,7 +196,7 @@ class CBPComponent:
             reply = self.socket.recv(128).decode('ascii', 'ignore')
 
     def get_altitude(self):
-        """This gets the altitude value from the altitude encoder
+        """This gets the altitude value from the altitude encoder in degrees.
 
         Returns
         -------
