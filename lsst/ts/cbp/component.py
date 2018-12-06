@@ -93,7 +93,7 @@ class CBPComponent:
     The class uses the python socket module to build TCP/IP connections to the galil controller mounted onto CBP. The
     underlying api is built on dmc,a language variant of c built by galil for controlling motors and such items.
     """
-    def __init__(self,address: str, port: int):
+    def __init__(self,address: str, port: int, simulation_mode=False):
         self.log = logging.getLogger(__name__)
         self.socket = None
         self.altitude = None
@@ -115,24 +115,30 @@ class CBPComponent:
             self.masks.mask5.name: self.masks.mask5,
             self.masks.mask9.name: self.masks.mask9}
         self.mask_id_dictionary = {
+            self.masks.mask1.id: self.masks.mask1,
+            self.masks.mask2.id: self.masks.mask2,
+            self.masks.mask3.id: self.masks.mask3,
+            self.masks.mask4.id: self.masks.mask4,
+            self.masks.mask5.id: self.masks.mask5,
             self.masks.mask9.id: self.masks.mask9
         }
         self.focus = None
         self._address = address
         self._port = port
-        self.connect()
-        self.get_cbp_telemetry()
         self.panic_status = None
-        self.check_panic_status()
         self.auto_park = None
         self.park = None
-        self.check_auto_park()
         self.azimuth_status = None
         self.altitude_status = None
         self.mask_select_status = None
         self.mask_rotate_status = None
         self.focus_status = None
-        self.check_cbp_status()
+        if not simulation_mode:
+            self.connect()
+            self.get_cbp_telemetry()
+            self.check_panic_status()
+            self.check_auto_park()
+            self.check_cbp_status()
         self.log.info("CBP component initialized")
 
     def parse_reply(self):
@@ -194,6 +200,7 @@ class CBPComponent:
         else:
             self.socket.sendall("new_az={0:f}\r".format(position).encode('ascii'))
             reply = self.socket.recv(128).decode('ascii', 'ignore')
+            self.log.debug(reply)
 
     def get_altitude(self):
         """This gets the altitude value from the altitude encoder in degrees.
@@ -225,6 +232,7 @@ class CBPComponent:
         else:
             self.socket.sendall("new_alt={0:f}\r".format(position).encode('ascii'))
             reply = self.socket.recv(128).decode('ascii', 'ignore')
+            self.log.debug(reply)
 
     def get_focus(self):
         """This gets the value of the focus encoder. Units: microns
@@ -255,6 +263,7 @@ class CBPComponent:
         else:
             self.socket.sendall("new_foc={0:f}\r".format(position).encode('ascii'))
             reply = self.socket.recv(128).decode('ascii', 'ignore')
+            self.log.debug(reply)
 
     def get_mask(self):
         """This gets the current mask value from the encoder which is converted into the name of the mask.
@@ -284,6 +293,7 @@ class CBPComponent:
             raise KeyError("Mask is not in dictionary, name may need to added or changed.")
         self.socket.sendall("new_msk={0:f}".format(self.mask_dictionary[mask].id).encode('ascii'))
         reply = self.socket.recv(128).decode('ascii', 'ignore')
+        self.log.debug(reply)
 
     def get_mask_rotation(self):
         """This gets the mask rotation value from the encoder which is in degrees.
@@ -313,6 +323,7 @@ class CBPComponent:
             raise ValueError("New mask rotation value exceeds mask rotation limits.")
         self.socket.sendall("new_rot={0:f}".format(mask_rotation).encode('ascii'))
         reply = self.socket.recv(128).decode('ascii', 'ignore')
+        self.log.debug(reply)
 
     def check_panic_status(self):
         """Gets the panic variable from CBP
@@ -364,6 +375,7 @@ class CBPComponent:
             raise ValueError("park must be binary value that is either 1 or 0.")
         self.socket.sendall("park={0:f}\r".format(park).encode('ascii'))
         reply = self.socket.recv(128).decode('ascii', 'ignore')
+        self.log.debug(reply)
 
     def check_cbp_status(self):
         """Checks the status of the encoders.
@@ -414,14 +426,18 @@ class CBPComponent:
 
 
 def main():
+    """Is meant for developer functional testing.
+
+    Returns
+    -------
+
+    """
     cbp = CBPComponent("140.252.33.12", 5000)
     cbp.publish()
-    print(cbp.azimuth)
-    print(cbp.altitude)
     print(cbp.panic_status)
-    cbp.move_altitude(0)
     cbp.publish()
     print(cbp.altitude)
+    cbp.move_altitude(0)
 
 
 if __name__ == '__main__':

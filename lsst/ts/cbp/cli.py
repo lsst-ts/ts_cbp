@@ -1,13 +1,13 @@
 #!/usr/bin/env python
-from lsst.ts.cbp.statemachine import CBPCsc
-import argh
 import asyncio
 import logging
 import argparse
+import argh
+from lsst.ts.cbp.statemachine import CBPCsc
 logging.captureWarnings(True)
 
 
-@argh.arg('-ll','--log-level',choices=['info','debug'])
+@argh.arg('-ll', '--log-level', choices=['info', 'debug'])
 def start(log_level="info"):
     """Starts the CSC.
 
@@ -23,7 +23,7 @@ def start(log_level="info"):
     formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s")
     ch.setFormatter(formatter)
     log.addHandler(ch)
-    cbp=CBPCsc("140.252.33.12",5000)
+    cbp=CBPCsc("140.252.33.12", 5000)
     log.info("CBP CSC initialized")
     loop = asyncio.get_event_loop()
     try:
@@ -31,22 +31,34 @@ def start(log_level="info"):
         loop.run_forever()
     except KeyboardInterrupt as kbe:
         log.info("Stopping CBP CSC")
+        log.exception(kbe)
     except Exception as e:
-        log.error(e)
+        log.exception(e)
     finally:
         loop.close()
 
 
 def create_parser():
+    """Creates the parser.
+
+    Returns
+    -------
+
+    """
     parser = argparse.ArgumentParser()
-    argh.set_default_command(parser,start)
+    argh.set_default_command(parser, start)
     return parser
 
 
 def main():
+    """Dispatches the command and runs the program.
+
+    Returns
+    -------
+
+    """
     parser = create_parser()
     argh.dispatch(parser)
-
 
 
 if __name__ == '__main__':

@@ -4,10 +4,8 @@
 import logging
 from lsst.ts.cbp.component import CBPComponent
 import asyncio
-from salobj.base_csc import BaseCsc
-from salobj import State
 import SALPY_CBP
-import salobj
+from lsst.ts.salobj import *
 
 
 class CBPCsc(BaseCsc):
@@ -60,7 +58,8 @@ class CBPCsc(BaseCsc):
         Topic for parked telemetry as defined in the XML.
 
     """
-    def __init__(self, port: str, address: int, frequency: float = 2, initial_state: State = State.STANDBY, speed=3.5,factor=1.25):
+    def __init__(self, port: str, address: int, frequency: float = 2, initial_state: State = State.STANDBY, speed=3.5,
+                 factor=1.25):
         super().__init__(SALPY_CBP)
         self.log = logging.getLogger(__name__)
         self.log.debug("logger initialized")
@@ -132,7 +131,7 @@ class CBPCsc(BaseCsc):
 
             await asyncio.sleep(self.frequency)
 
-    async def do_moveAltitude(self,id_data):
+    async def do_moveAltitude(self, id_data):
         """Moves the altitude axis of the CBP.
 
         Parameters
@@ -175,7 +174,7 @@ class CBPCsc(BaseCsc):
         self.assert_enabled("park")
         self.model.park()
 
-    async def do_changeMask(self,id_data):
+    async def do_changeMask(self, id_data):
         """Changes the mask.
 
         Parameters
@@ -233,7 +232,7 @@ class CBPCsc(BaseCsc):
         self.model._cbp.set_park()
 
 
-class CBPRemote:
+class CBPDeveloperRemote:
     """This the class that provides an example of how to use the remote functionality for the CBP CSC.
 
     Attributes
@@ -244,12 +243,18 @@ class CBPRemote:
     log: logging.Logger
         This is the log for the current class.
 
+    Warnings
+    -----
+    This class is currently for the developer to use. In a future version, it will likely become more useful for the end
+    user. Hence it is considered not to be used for any production purposes unless you understand the consequences.
+
+
     """
     def __init__(self):
-        self.remote = salobj.Remote(SALPY_CBP)
+        self.remote = Remote(SALPY_CBP)
         self.log = logging.getLogger(__name__)
 
-    async def standby(self,timeout=10):
+    async def standby(self, timeout=10):
         """Calls and awaits the standby command. Logs the acknowledgement code from the command.
 
         Returns
@@ -261,7 +266,7 @@ class CBPRemote:
         standby_ack = await self.remote.cmd_standby.start(standby_topic,timeout=timeout)
         self.log.info(standby_ack.ack.ack)
 
-    async def disable(self,timeout=10):
+    async def disable(self, timeout=10):
         """Calls and awaits the disable command and logs the acknowledgement code.
 
         Returns
@@ -273,7 +278,7 @@ class CBPRemote:
         disable_ack = await self.remote.cmd_disable.start(disable_topic,timeout=timeout)
         self.log.info(disable_ack.ack.ack)
 
-    async def start(self,timeout=10):
+    async def start(self, timeout=10):
         """Calls the start and awaits the result and logs the acknowledgement code.
 
         Returns
@@ -285,7 +290,7 @@ class CBPRemote:
         start_ack = await self.remote.cmd_start.start(start_topic,timeout=timeout)
         self.log.info(start_ack.ack.ack)
 
-    async def enable(self,timeout=10):
+    async def enable(self, timeout=10):
         """Calls the enable command and awaits the result which logs the acknowledgement code.
 
         Returns
@@ -420,7 +425,6 @@ class CBPModel:
     parked: int
         The last updated parked attribute.
     """
-    # TODO: write docstrings
     def __init__(self,port: str, address: int):
         self._cbp = CBPComponent(port, address)
         self.publish()
@@ -451,7 +455,6 @@ class CBPModel:
         None
 
         """
-        # TODO: write docstrings
         self._cbp.move_azimuth(azimuth)
 
     def move_altitude(self, altitude: float):
@@ -467,7 +470,6 @@ class CBPModel:
         None
 
         """
-        # TODO: write docstrings
         self._cbp.move_altitude(altitude)
 
     def change_mask(self, mask: str):
@@ -483,11 +485,9 @@ class CBPModel:
         None
 
         """
-        # TODO: write docstrings
         mask_rotation = self._cbp.mask_dictionary[mask].rotation
         self._cbp.set_mask(mask)
         self._cbp.set_mask_rotation(mask_rotation)
-        # TODO: write change_mask function
 
     def change_focus(self, focus: int):
         """Calls the change_focus function of the CBP component,
@@ -502,7 +502,6 @@ class CBPModel:
         None
 
         """
-        # TODO: write docstrings
         self._cbp.change_focus(focus)
 
     def park(self):
@@ -523,5 +522,4 @@ class CBPModel:
         None
 
         """
-        # TODO: write docstrings
         self._cbp.publish()

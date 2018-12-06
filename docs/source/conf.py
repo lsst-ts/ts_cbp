@@ -21,8 +21,8 @@ from pkg_resources import get_distribution
 # -- Project information -----------------------------------------------------
 
 project = 'ts-cbp'
-copyright = '2018, lsst-ts'
-author = 'lsst-ts'
+copyright = '2018, lsst-tssw'
+author = 'lsst-tssw'
 
 # The short X.Y version
 version = get_distribution('ts-cbp').version
@@ -50,6 +50,7 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.napoleon',
     'sphinxarg.ext',
+    'sphinxcontrib.confluencebuilder'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
