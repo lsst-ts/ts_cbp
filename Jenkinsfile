@@ -8,7 +8,7 @@ pipeline {
         // The nodes in T&S teams are 'jenkins-master' and 'jenkins-el7-1'
         docker {
             image 'python:3.6.2'
-            label 'jenkins-master'
+            label 'jenkins-el7-1'
         }
     }
 
