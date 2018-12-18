@@ -10,13 +10,14 @@ Welcome to ts-cbp's documentation!
    :hidden:
    :caption: Contents:
 
+   user_guide
    api
    cli
 
 
 Description
 -----------
-ts-cbp is a package that creates a python wrapper around Galil's DMC code which is the internal language of the
+ts_cbp is a package that creates a python wrapper around Galil's DMC code which is the internal language of the
 controller. This code was written by DFM Manufacturing, who are also the company that created the physical CBP.
 
 Installation

@@ -1,7 +1,12 @@
 User Guide
 ==========
-
 This is for using the CBP CSC as a remote by a control script(or whatever it ends up being called) writer.
+
+Setting Up Hardware
+-------------------
+CBP uses ethernet as its primary connection interface and has a static ip address assigned to it. Connection to the cbp
+simple as knowing the ip address given everything is setup properly network side.
+
 
 .. code-block:: python
 
@@ -21,5 +26,6 @@ This is for using the CBP CSC as a remote by a control script(or whatever it end
 
      if __name__ == "__main__":
         asyncio.get_event_loop().run_until_complete(main())
+
 
 

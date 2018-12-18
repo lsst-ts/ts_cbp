@@ -9,7 +9,8 @@ The following assumes that
 * That ts_sal is installed according SAL user guide instructions
 * Running code in python 3.6.^ virtualenv # Carrot indicates any minor release in 3.6 should work tested with 3.6.3 and 3.6.2
 * That ts_salobj code is located in gitrepo directory
-* That ts_salobj is version 3.3.0
+* That ts_salobj is version 3.^.0
+* That code must be installed to build documentation as otherwise autodoc will fail.
 
 ``` bash
    cd ~/gitrepo
