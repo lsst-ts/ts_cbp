@@ -1,4 +1,4 @@
-"""This module is for implementing the component logic for CBP.
+"""This module is for implementing the component logic for the CBP.
 
 """
 import logging
@@ -9,16 +9,15 @@ from types import SimpleNamespace
 class CBPComponent:
     """This class is for implementing the CBP component.
 
-    The component implements a python wrapper over dmc code[which is the language that the Galil controller uses]
-    written by DFM Manufacturing. The following api exposes commands that move the motors of the CBP, sets the focus
-    and chooses the mask.
+    The component implements a python wrapper over :term:`DMC` code written by DFM Manufacturing. The following api
+    exposes commands that move the motors of the CBP, sets the focus and selects the mask.
 
     Parameters
     ----------
     address : str
-       The ip address of the CBP galil component
+       The ip address of the CBP galil controller.
     port : int
-        The port to connect to the CBP galil component
+        The port to connect to the CBP galil controller.
 
     Attributes
     ----------
@@ -62,24 +61,24 @@ class CBPComponent:
         if set to zero it will unpark.
 
     azimuth_status: float
-        This is the current value of the status of the azimuth encoder. If this value is non-zero, the encoder has some
-        kind of issue.
+        This is the current value of the status of the azimuth encoder. If this value is non-zero, the encoder has an
+        :ref:`error<intro:Errors>`.
 
     altitude_status: float
-        This is the current value of the status of the altitude encoder. If this value is non-zero, the encoder has some
-        kind of issue.
+        This is the current value of the status of the altitude encoder. If this value is non-zero, the encoder has an
+        :ref:`error<intro:Errors>`.
 
     mask_select_status: float
         This is the current value of the status of the mask selection encoder. If this value is non-zero, the encoder
-        has some kind of issue.
+        has an :ref:`error<intro:Errors>`.
 
     mask_rotate_status: float
         This is the current value of the status of the mask rotation encoder. If this value is non-zero, the encoder
-        has some kind of issue.
+        has an :ref:`error<intro:Errors>`.
 
     focus_status: float
-        This is the current value of the status of the focus encoder. If this value is non-zero, the encoder has some
-        kind of issue.
+        This is the current value of the status of the focus encoder. If this value is non-zero, the encoder has an
+        :ref:`error<intro:Errors>`.
 
     Warnings
     --------
@@ -91,7 +90,7 @@ class CBPComponent:
     -----
 
     The class uses the python socket module to build TCP/IP connections to the galil controller mounted onto CBP. The
-    underlying api is built on dmc,a language variant of c built by galil for controlling motors and such items.
+    underlying api is built on :term:`DMC`.
     """
     def __init__(self,address: str, port: int, simulation_mode=False):
         self.log = logging.getLogger(__name__)
