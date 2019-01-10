@@ -9,7 +9,7 @@ from lsst.ts.salobj import *
 
 
 class CBPCsc(BaseCsc):
-    """This defines the CBP CSC(Commandable SAL Component) using salobj
+    """This defines the CBP :term:`CSC` using ts_salobj.
 
     Parameters
     ----------
@@ -245,8 +245,7 @@ class CBPDeveloperRemote:
 
     Warnings
     -----
-    This class is currently for the developer to use. In a future version, it will likely become more useful for the end
-    user. Hence it is considered not to be used for any production purposes unless you understand the consequences.
+    Not for production purposes.
 
 
     """

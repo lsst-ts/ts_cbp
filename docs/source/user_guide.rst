@@ -2,11 +2,13 @@ User Guide
 ==========
 This is for using the CBP CSC as a remote by a control script(or whatever it ends up being called) writer.
 
-Setting Up Hardware
--------------------
+Establishing Communication with Hardware
+----------------------------------------
 CBP uses ethernet as its primary connection interface and has a static ip address assigned to it. Connection to the cbp
-simple as knowing the ip address given everything is setup properly network side.
+is simple as knowing the ip address given everything is setup properly network side.
 
+Example Usage
+-------------
 
 .. code-block:: python
 
@@ -15,6 +17,7 @@ simple as knowing the ip address given everything is setup properly network side
     import asyncio
 
     async def main():
+        # a function which moves the CBP azimuth and altitude axii 3 and 5 degrees at the same time
         cbp_remote = Remote(SALPY_CBP)
         move_azimuth_topic = cbp_remote.cmd_moveAzimuth.DataType()
         move_azimuth_topic.azimuth = 3
