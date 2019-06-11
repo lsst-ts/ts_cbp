@@ -1,0 +1,56 @@
+$schema: http://json-schema.org/draft-07/schema#
+$id: https://github.com/lsst-ts/ts_CBP/blob/master/schema/CBP.yaml
+title: CBP v1
+description: Schema for CBP configuration files
+type: object
+properties:
+  address:
+    description: IP address of CBP
+    type: string
+  port:
+    description: port of CBP
+    type: integer
+  mask1:
+    description: Mask 1 of CBP
+    type: object
+    properties:
+      name:
+        description: name of mask
+        type: string
+      rotation:
+        description: rotation of mask
+        type: number
+  mask2:
+    description: Mask 2 of CBP
+    type: object
+    properties:
+      name:
+        type: string
+      rotation:
+        type: number
+  mask3:
+    description: Mask 3 of CBP
+    type: object
+    properties:
+      name:
+        type: string
+      rotation:
+        type: number
+  mask4:
+    description: Mask 4 of CBP
+    type: object
+    properties:
+      name:
+        type: string
+      rotation:
+        type: number
+  mask5:
+    description: Mask 5 of CBP
+    type: object
+    properties:
+      name:
+        type: string
+      rotation:
+        type: number
+
+

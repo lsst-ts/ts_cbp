@@ -3,7 +3,7 @@
 """
 import logging
 import socket
-from types import SimpleNamespace
+import types
 
 
 class CBPComponent:
@@ -80,32 +80,26 @@ class CBPComponent:
         This is the current value of the status of the focus encoder. If this value is non-zero, the encoder has an
         :ref:`error<intro:Errors>`.
 
-    Warnings
-    --------
-
-    The mask functionality is not quite done being implemented yet. This is because there are no physical masks yet and
-    therefore names are not final.
-
     Notes
     -----
 
     The class uses the python socket module to build TCP/IP connections to the galil controller mounted onto CBP. The
     underlying api is built on :term:`DMC`.
     """
-    def __init__(self,address: str, port: int, simulation_mode=False):
+    def __init__(self):
         self.log = logging.getLogger(__name__)
         self.socket = None
         self.altitude = None
         self.azimuth = None
         self.mask = None
         self.mask_rotation = None
-        self.masks = SimpleNamespace(
-            mask1=SimpleNamespace(name="Not a mask 1", rotation=0, id=1.),
-            mask2=SimpleNamespace(name="Not a mask 2", rotation=0, id=2.),
-            mask3=SimpleNamespace(name="Not a mask 3", rotation=0, id=3.),
-            mask4=SimpleNamespace(name="Not a mask 4", rotation=0, id=4.),
-            mask5=SimpleNamespace(name="Not a mask 5", rotation=0, id=5.),
-            mask9=SimpleNamespace(name="Unknown Mask", rotation=0, id=9.))
+        self.masks = types.SimpleNamespace(
+            mask1=types.SimpleNamespace(name=f"Not a mask 1", rotation=0, id=1.),
+            mask2=types.SimpleNamespace(name="Not a mask 2", rotation=0, id=2.),
+            mask3=types.SimpleNamespace(name="Not a mask 3", rotation=0, id=3.),
+            mask4=types.SimpleNamespace(name="Not a mask 4", rotation=0, id=4.),
+            mask5=types.SimpleNamespace(name="Not a mask 5", rotation=0, id=5.),
+            mask9=types.SimpleNamespace(name="Unknown Mask", rotation=0, id=9.))
         self.mask_dictionary = {
             self.masks.mask1.name: self.masks.mask1,
             self.masks.mask2.name: self.masks.mask2,
@@ -122,8 +116,8 @@ class CBPComponent:
             self.masks.mask9.id: self.masks.mask9
         }
         self.focus = None
-        self._address = address
-        self._port = port
+        self._address = None
+        self._port = None
         self.panic_status = None
         self.auto_park = None
         self.park = None
@@ -132,12 +126,6 @@ class CBPComponent:
         self.mask_select_status = None
         self.mask_rotate_status = None
         self.focus_status = None
-        if not simulation_mode:
-            self.connect()
-            self.get_cbp_telemetry()
-            self.check_panic_status()
-            self.check_auto_park()
-            self.check_cbp_status()
         self.log.info("CBP component initialized")
 
     def parse_reply(self):
@@ -149,7 +137,10 @@ class CBPComponent:
             The reply that was parsed.
 
         """
-        parsed_reply = self.socket.recv(128).decode('ascii').split("\r")[0]
+        if self.simulation_mode == 0:
+            parsed_reply = self.socket.recv(128).decode('ascii').split("\r")[0]
+        elif self.simulation_mode == 1:
+            parsed_reply = "0"
         return parsed_reply
 
     def connect(self):
@@ -170,6 +161,10 @@ class CBPComponent:
         except TimeoutError as te:
             self.log.error("Socket timed out")
             raise te
+
+    def disconnect(self):
+        self.socket.close()
+        self.socket = None
 
     def get_azimuth(self):
         """Gets azimuth value from azimuth encoder which is in degrees.
@@ -409,6 +404,20 @@ class CBPComponent:
         self.get_mask()
         self.get_mask_rotation()
 
+    def configure(self):
+        self._address= self.config.address
+        self._port=self.config.port
+        self.masks.mask1.name=self.config.mask1.name
+        self.masks.mask1.rotation = self.config.mask1.rotation
+        self.masks.mask2.name=self.config.mask2.name
+        self.masks.mask2.rotation=self.config.mask2.rotation
+        self.masks.mask3.name=self.config.mask3.name
+        self.masks.mask3.rotation=self.config.mask3.rotation
+        self.masks.mask4.name=self.config.mask4.name
+        self.masks.mask4.rotation=self.config.mask4.rotation
+        self.masks.mask5.name=self.config.mask5.name
+        self.masks.mask5.rotation=self.config.mask5.rotation
+
     def publish(self):
         """This updates the attributes within the component.
 
@@ -422,6 +431,9 @@ class CBPComponent:
         self.check_park()
         self.check_auto_park()
         self.get_cbp_telemetry()
+
+    def set_simulation_mode(self,simulation_mode):
+        self.simulation_mode = simulation_mode
 
 
 def main():
