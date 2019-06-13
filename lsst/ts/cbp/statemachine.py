@@ -1,6 +1,3 @@
-"""This module contains the logic for the CSC for CBP.
-
-"""
 import logging
 import pathlib
 from . import component
@@ -59,16 +56,18 @@ class CBPCsc(salobj.ConfigurableCsc):
         Topic for parked telemetry as defined in the XML.
 
     """
-    def __init__(self,
-            frequency: float = 2, 
-            initial_state: salobj.State = salobj.State.STANDBY, 
+    def __init__(
+            self,
+            frequency: float = 2,
+            initial_state: salobj.State = salobj.State.STANDBY,
             speed=3.5,
             factor=1.25,
             simulation_mode=0,
-            schema=pathlib.Path(__file__).parents[3].joinpath("schema","CBP.yaml")):
-        super().__init__(SALPY_CBP,
-                None,
-                schema)
+            schema=pathlib.Path(__file__).parents[3].joinpath("schema", "CBP.yaml")):
+        super().__init__(
+            SALPY_CBP,
+            None,
+            schema)
         self.summary_state = initial_state
         self.model = CBPModel()
         self.frequency = frequency
@@ -207,7 +206,7 @@ class CBPCsc(salobj.ConfigurableCsc):
         None
 
         """
-        pass # TODO: finish clearFault
+        pass  # TODO: finish clearFault
 
     async def do_enterControl(self, id_data):
         """
@@ -221,7 +220,7 @@ class CBPCsc(salobj.ConfigurableCsc):
         None
 
         """
-        pass #TODO: finish enterControl
+        pass  # TODO: finish enterControl
 
     async def begin_enable(self, id_data):
         """Overrides the begin_enable function in salobj.BaseCsc to make sure the CBP is unparked.
@@ -254,11 +253,14 @@ class CBPCsc(salobj.ConfigurableCsc):
     def get_config_pkg(self):
         return "ts_config_mtcalsys"
 
-    async def implement_simulation_mode(self,simulation_mode):
+    async def implement_simulation_mode(self, simulation_mode):
         if simulation_mode == 0:
             self.model._cbp.set_simulation_mode(simulation_mode)
         elif simulation_mode == 1:
             self.model._cbp.set_simulation_mode(simulation_mode)
+        else:
+            raise salobj.ExpectedError(f"{simulation mode} is not a valid value")
+
 
 class CBPModel:
     """This is the model that connects the CSC and the component together.
@@ -395,8 +397,7 @@ class CBPModel:
         self._cbp.disconnect()
 
     def configure(self, config):
-        self._cbp.config=config
-        self._cbp.configure()
+        self._cbp.configure(config)
 
     def publish(self):
         """Calls the publish function of the component.

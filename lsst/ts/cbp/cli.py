@@ -8,7 +8,7 @@ logging.captureWarnings(True)
 
 
 @argh.arg('-ll', '--log-level', choices=['info', 'debug'])
-def start(log_level="info",simulation_mode=0):
+def start(log_level="info", simulation_mode=0):
     """Starts the CSC.
 
     """
@@ -23,7 +23,7 @@ def start(log_level="info",simulation_mode=0):
     formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s")
     ch.setFormatter(formatter)
     log.addHandler(ch)
-    cbp=CBPCsc(simulation_mode=0)
+    cbp = CBPCsc(simulation_mode=simulation_mode)
     log.info("CBP CSC initialized")
     loop = asyncio.get_event_loop()
     try:

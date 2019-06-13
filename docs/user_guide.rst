@@ -25,7 +25,8 @@ Example Usage
         cbp_remote.cmd_moveAltitude.set(altitude=5)
         move_azimuth_task = cbp_remote.cmd_moveAzimuth.start(timeout=10)
         move_altitude_task = cbp_remote.cmd_moveAltitude.start(timeout=10)
-        asyncio.gather([move_azimuth_task,move_altitude_task])
+        # Either unpack a list or simply use commas to denote tasks
+        asyncio.gather(**[move_azimuth_task,move_altitude_task])
 
      if __name__ == "__main__":
         asyncio.get_event_loop().run_until_complete(main())

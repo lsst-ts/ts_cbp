@@ -18,7 +18,7 @@ properties:
         description: name of mask
         type: string
       rotation:
-        description: rotation of mask
+        description: rotation of mask (degree)
         type: number
   mask2:
     description: Mask 2 of CBP
@@ -27,6 +27,7 @@ properties:
       name:
         type: string
       rotation:
+        description: rotation of mask (degree)
         type: number
   mask3:
     description: Mask 3 of CBP
@@ -35,6 +36,7 @@ properties:
       name:
         type: string
       rotation:
+        description: rotation of mask (degree)
         type: number
   mask4:
     description: Mask 4 of CBP
@@ -44,6 +46,7 @@ properties:
         type: string
       rotation:
         type: number
+        description: rotation of mask (degree)
   mask5:
     description: Mask 5 of CBP
     type: object
@@ -52,5 +55,5 @@ properties:
         type: string
       rotation:
         type: number
-
+        description: rotation of mask (degree)
 

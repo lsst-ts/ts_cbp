@@ -9,8 +9,8 @@ import types
 class CBPComponent:
     """This class is for implementing the CBP component.
 
-    The component implements a python wrapper over :term:`DMC` code written by DFM Manufacturing. The following api
-    exposes commands that move the motors of the CBP, sets the focus and selects the mask.
+    The component implements a python wrapper over :term:`DMC` code written by DFM Manufacturing.
+    The following api exposes commands that move the motors of the CBP, sets the focus and selects the mask.
 
     Parameters
     ----------
@@ -46,45 +46,50 @@ class CBPComponent:
         The current value of the focus encoder in microns.
 
     panic_status: float
-        The current value of the panic variable in the CBP dmc code. A non-zero value represents a panic state and
-        causes the motors to cease functioning until panic is dealt with or goes away. This status is related to the
-        other statuses.
+        The current value of the panic variable in the CBP dmc code.
+        A non-zero value represents a panic state and causes the motors to cease functioning until panic is
+        dealt with or goes away.
+        This status is related to the other statuses.
 
     auto_park: float
-        The current value of the auto_park variable. If this value is one, that means that CBP suffered a power loss
-        that lasted more than 12 seconds and was on battery back up. The CBP will then park itself automatically, moving
-        azimuth to 0 and altitude to -70 and lock focus and mask. To unpark CBP, the park variable should be set to
-        zero.
+        The current value of the auto_park variable.
+        If this value is one, that means that CBP suffered a power loss that lasted more than 12 seconds and
+        was on battery back up.
+        The CBP will then park itself automatically, moving azimuth to 0 and altitude to -70 and lock focus
+        and mask.
+        To unpark CBP, the park variable should be set to zero.
 
     park: float
-        The current value of the park variable. This value can be set to one or zero, if set to one it will park the CBP
-        if set to zero it will unpark.
+        The current value of the park variable.
+        This value can be set to one or zero, if set to one it will park the CBP if set to zero it will
+        unpark.
 
     azimuth_status: float
-        This is the current value of the status of the azimuth encoder. If this value is non-zero, the encoder has an
-        :ref:`error<intro:Errors>`.
+        This is the current value of the status of the azimuth encoder.
+        If this value is non-zero, the encoder has an :ref:`error<intro:Errors>`.
 
     altitude_status: float
-        This is the current value of the status of the altitude encoder. If this value is non-zero, the encoder has an
-        :ref:`error<intro:Errors>`.
+        This is the current value of the status of the altitude encoder.
+        If this value is non-zero, the encoder has an :ref:`error<intro:Errors>`.
 
     mask_select_status: float
-        This is the current value of the status of the mask selection encoder. If this value is non-zero, the encoder
-        has an :ref:`error<intro:Errors>`.
+        This is the current value of the status of the mask selection encoder.
+        If this value is non-zero, the encoder has an :ref:`error<intro:Errors>`.
 
     mask_rotate_status: float
-        This is the current value of the status of the mask rotation encoder. If this value is non-zero, the encoder
-        has an :ref:`error<intro:Errors>`.
+        This is the current value of the status of the mask rotation encoder.
+        If this value is non-zero, the encoder has an :ref:`error<intro:Errors>`.
 
     focus_status: float
-        This is the current value of the status of the focus encoder. If this value is non-zero, the encoder has an
-        :ref:`error<intro:Errors>`.
+        This is the current value of the status of the focus encoder.
+        If this value is non-zero, the encoder has an :ref:`error<intro:Errors>`.
 
     Notes
     -----
 
-    The class uses the python socket module to build TCP/IP connections to the galil controller mounted onto CBP. The
-    underlying api is built on :term:`DMC`.
+    The class uses the python socket module to build TCP/IP connections to the galil controller mounted onto
+    CBP.
+    The underlying api is built on :term:`DMC`.
     """
     def __init__(self):
         self.log = logging.getLogger(__name__)
@@ -126,6 +131,7 @@ class CBPComponent:
         self.mask_select_status = None
         self.mask_rotate_status = None
         self.focus_status = None
+        self.simulation_mode = 0
         self.log.info("CBP component initialized")
 
     def parse_reply(self):
@@ -208,7 +214,7 @@ class CBPComponent:
         self.socket.sendall("alt=?\r".encode('ascii'))
         self.altitude = float(self.parse_reply())
 
-    def move_altitude(self,position: float):
+    def move_altitude(self, position: float):
         """This moves the vertical axis to the value that the user sent.
 
         Parameters
@@ -239,7 +245,7 @@ class CBPComponent:
         self.socket.sendall("foc=?\r".encode('ascii'))
         self.focus = float(self.parse_reply())
 
-    def change_focus(self,position: int):
+    def change_focus(self, position: int):
         """This changes the focus to whatever value the user sent.
 
         Parameters
@@ -300,7 +306,7 @@ class CBPComponent:
         self.socket.sendall("rot=?\r".encode('ascii'))
         self.mask_rotation = float(self.parse_reply())
 
-    def set_mask_rotation(self,mask_rotation: float):
+    def set_mask_rotation(self, mask_rotation: float):
         """This sets the mask rotation
 
         Parameters
@@ -352,7 +358,7 @@ class CBPComponent:
         self.socket.sendall("park=?\r".encode('ascii'))
         self.park = float(self.parse_reply())
 
-    def set_park(self, park: int=0):
+    def set_park(self, park: int = 0):
         """A function that tells the CBP to park or unpark depending on the value given.
 
         Parameters
@@ -365,7 +371,7 @@ class CBPComponent:
         None
 
         """
-        if park not in [0,1]:
+        if park not in [0, 1]:
             raise ValueError("park must be binary value that is either 1 or 0.")
         self.socket.sendall("park={0:f}\r".format(park).encode('ascii'))
         reply = self.socket.recv(128).decode('ascii', 'ignore')
@@ -404,19 +410,20 @@ class CBPComponent:
         self.get_mask()
         self.get_mask_rotation()
 
-    def configure(self):
-        self._address= self.config.address
-        self._port=self.config.port
-        self.masks.mask1.name=self.config.mask1.name
+    def configure(self, config):
+        self.config = config
+        self._address = self.config.address
+        self._port = self.config.port
+        self.masks.mask1.name = self.config.mask1.name
         self.masks.mask1.rotation = self.config.mask1.rotation
-        self.masks.mask2.name=self.config.mask2.name
-        self.masks.mask2.rotation=self.config.mask2.rotation
-        self.masks.mask3.name=self.config.mask3.name
-        self.masks.mask3.rotation=self.config.mask3.rotation
-        self.masks.mask4.name=self.config.mask4.name
-        self.masks.mask4.rotation=self.config.mask4.rotation
-        self.masks.mask5.name=self.config.mask5.name
-        self.masks.mask5.rotation=self.config.mask5.rotation
+        self.masks.mask2.name = self.config.mask2.name
+        self.masks.mask2.rotation = self.config.mask2.rotation
+        self.masks.mask3.name = self.config.mask3.name
+        self.masks.mask3.rotation = self.config.mask3.rotation
+        self.masks.mask4.name = self.config.mask4.name
+        self.masks.mask4.rotation = self.config.mask4.rotation
+        self.masks.mask5.name = self.config.mask5.name
+        self.masks.mask5.rotation = self.config.mask5.rotation
 
     def publish(self):
         """This updates the attributes within the component.
@@ -432,7 +439,7 @@ class CBPComponent:
         self.check_auto_park()
         self.get_cbp_telemetry()
 
-    def set_simulation_mode(self,simulation_mode):
+    def set_simulation_mode(self, simulation_mode):
         self.simulation_mode = simulation_mode
 
 
