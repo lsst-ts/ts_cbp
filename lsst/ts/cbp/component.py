@@ -441,22 +441,3 @@ class CBPComponent:
 
     def set_simulation_mode(self, simulation_mode):
         self.simulation_mode = simulation_mode
-
-
-def main():
-    """Is meant for developer functional testing.
-
-    Returns
-    -------
-
-    """
-    cbp = CBPComponent("140.252.33.12", 5000)
-    cbp.publish()
-    print(cbp.panic_status)
-    cbp.publish()
-    print(cbp.altitude)
-    cbp.move_altitude(0)
-
-
-if __name__ == '__main__':
-    main()
