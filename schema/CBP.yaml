@@ -56,4 +56,5 @@ properties:
       rotation:
         type: number
         description: rotation of mask (degree)
-
+required: [address, port, mask1, mask2, mask3, mask4, mask5]
+additionalProperties: false
