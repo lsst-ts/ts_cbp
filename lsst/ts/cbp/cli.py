@@ -8,7 +8,7 @@ logging.captureWarnings(True)
 
 
 @argh.arg('-ll', '--log-level', choices=['info', 'debug'])
-def start(log_level="info"):
+def start(log_level="info", simulation_mode=0):
     """Starts the CSC.
 
     """
@@ -23,12 +23,12 @@ def start(log_level="info"):
     formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s")
     ch.setFormatter(formatter)
     log.addHandler(ch)
-    cbp=CBPCsc("140.252.33.12", 5000)
+    cbp = CBPCsc(simulation_mode=simulation_mode)
     log.info("CBP CSC initialized")
     loop = asyncio.get_event_loop()
     try:
         log.info('Running CSC (Hit ctrl+c to stop it')
-        loop.run_forever()
+        loop.run_until_complete(cbp.done_task)
     except KeyboardInterrupt as kbe:
         log.info("Stopping CBP CSC")
         log.exception(kbe)

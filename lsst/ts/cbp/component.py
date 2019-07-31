@@ -3,14 +3,14 @@
 """
 import logging
 import socket
-from types import SimpleNamespace
+import types
 
 
 class CBPComponent:
     """This class is for implementing the CBP component.
 
-    The component implements a python wrapper over :term:`DMC` code written by DFM Manufacturing. The following api
-    exposes commands that move the motors of the CBP, sets the focus and selects the mask.
+    The component implements a python wrapper over :term:`DMC` code written by DFM Manufacturing.
+    The following api exposes commands that move the motors of the CBP, sets the focus and selects the mask.
 
     Parameters
     ----------
@@ -46,66 +46,65 @@ class CBPComponent:
         The current value of the focus encoder in microns.
 
     panic_status: float
-        The current value of the panic variable in the CBP dmc code. A non-zero value represents a panic state and
-        causes the motors to cease functioning until panic is dealt with or goes away. This status is related to the
-        other statuses.
+        The current value of the panic variable in the CBP dmc code.
+        A non-zero value represents a panic state and causes the motors to cease functioning until panic is
+        dealt with or goes away.
+        This status is related to the other statuses.
 
     auto_park: float
-        The current value of the auto_park variable. If this value is one, that means that CBP suffered a power loss
-        that lasted more than 12 seconds and was on battery back up. The CBP will then park itself automatically, moving
-        azimuth to 0 and altitude to -70 and lock focus and mask. To unpark CBP, the park variable should be set to
-        zero.
+        The current value of the auto_park variable.
+        If this value is one, that means that CBP suffered a power loss that lasted more than 12 seconds and
+        was on battery back up.
+        The CBP will then park itself automatically, moving azimuth to 0 and altitude to -70 and lock focus
+        and mask.
+        To unpark CBP, the park variable should be set to zero.
 
     park: float
-        The current value of the park variable. This value can be set to one or zero, if set to one it will park the CBP
-        if set to zero it will unpark.
+        The current value of the park variable.
+        This value can be set to one or zero, if set to one it will park the CBP if set to zero it will
+        unpark.
 
     azimuth_status: float
-        This is the current value of the status of the azimuth encoder. If this value is non-zero, the encoder has an
-        :ref:`error<intro:Errors>`.
+        This is the current value of the status of the azimuth encoder.
+        If this value is non-zero, the encoder has an :ref:`error<intro:Errors>`.
 
     altitude_status: float
-        This is the current value of the status of the altitude encoder. If this value is non-zero, the encoder has an
-        :ref:`error<intro:Errors>`.
+        This is the current value of the status of the altitude encoder.
+        If this value is non-zero, the encoder has an :ref:`error<intro:Errors>`.
 
     mask_select_status: float
-        This is the current value of the status of the mask selection encoder. If this value is non-zero, the encoder
-        has an :ref:`error<intro:Errors>`.
+        This is the current value of the status of the mask selection encoder.
+        If this value is non-zero, the encoder has an :ref:`error<intro:Errors>`.
 
     mask_rotate_status: float
-        This is the current value of the status of the mask rotation encoder. If this value is non-zero, the encoder
-        has an :ref:`error<intro:Errors>`.
+        This is the current value of the status of the mask rotation encoder.
+        If this value is non-zero, the encoder has an :ref:`error<intro:Errors>`.
 
     focus_status: float
-        This is the current value of the status of the focus encoder. If this value is non-zero, the encoder has an
-        :ref:`error<intro:Errors>`.
-
-    Warnings
-    --------
-
-    The mask functionality is not quite done being implemented yet. This is because there are no physical masks yet and
-    therefore names are not final.
+        This is the current value of the status of the focus encoder.
+        If this value is non-zero, the encoder has an :ref:`error<intro:Errors>`.
 
     Notes
     -----
 
-    The class uses the python socket module to build TCP/IP connections to the galil controller mounted onto CBP. The
-    underlying api is built on :term:`DMC`.
+    The class uses the python socket module to build TCP/IP connections to the galil controller mounted onto
+    CBP.
+    The underlying api is built on :term:`DMC`.
     """
-    def __init__(self,address: str, port: int, simulation_mode=False):
+    def __init__(self):
         self.log = logging.getLogger(__name__)
         self.socket = None
         self.altitude = None
         self.azimuth = None
         self.mask = None
         self.mask_rotation = None
-        self.masks = SimpleNamespace(
-            mask1=SimpleNamespace(name="Not a mask 1", rotation=0, id=1.),
-            mask2=SimpleNamespace(name="Not a mask 2", rotation=0, id=2.),
-            mask3=SimpleNamespace(name="Not a mask 3", rotation=0, id=3.),
-            mask4=SimpleNamespace(name="Not a mask 4", rotation=0, id=4.),
-            mask5=SimpleNamespace(name="Not a mask 5", rotation=0, id=5.),
-            mask9=SimpleNamespace(name="Unknown Mask", rotation=0, id=9.))
+        self.masks = types.SimpleNamespace(
+            mask1=types.SimpleNamespace(name=f"Not a mask 1", rotation=0, id=1.),
+            mask2=types.SimpleNamespace(name="Not a mask 2", rotation=0, id=2.),
+            mask3=types.SimpleNamespace(name="Not a mask 3", rotation=0, id=3.),
+            mask4=types.SimpleNamespace(name="Not a mask 4", rotation=0, id=4.),
+            mask5=types.SimpleNamespace(name="Not a mask 5", rotation=0, id=5.),
+            mask9=types.SimpleNamespace(name="Unknown Mask", rotation=0, id=9.))
         self.mask_dictionary = {
             self.masks.mask1.name: self.masks.mask1,
             self.masks.mask2.name: self.masks.mask2,
@@ -122,8 +121,8 @@ class CBPComponent:
             self.masks.mask9.id: self.masks.mask9
         }
         self.focus = None
-        self._address = address
-        self._port = port
+        self._address = None
+        self._port = None
         self.panic_status = None
         self.auto_park = None
         self.park = None
@@ -132,12 +131,7 @@ class CBPComponent:
         self.mask_select_status = None
         self.mask_rotate_status = None
         self.focus_status = None
-        if not simulation_mode:
-            self.connect()
-            self.get_cbp_telemetry()
-            self.check_panic_status()
-            self.check_auto_park()
-            self.check_cbp_status()
+        self.simulation_mode = 0
         self.log.info("CBP component initialized")
 
     def parse_reply(self):
@@ -149,7 +143,10 @@ class CBPComponent:
             The reply that was parsed.
 
         """
-        parsed_reply = self.socket.recv(128).decode('ascii').split("\r")[0]
+        if self.simulation_mode == 0:
+            parsed_reply = self.socket.recv(128).decode('ascii').split("\r")[0]
+        elif self.simulation_mode == 1:
+            parsed_reply = "0"
         return parsed_reply
 
     def connect(self):
@@ -170,6 +167,10 @@ class CBPComponent:
         except TimeoutError as te:
             self.log.error("Socket timed out")
             raise te
+
+    def disconnect(self):
+        self.socket.close()
+        self.socket = None
 
     def get_azimuth(self):
         """Gets azimuth value from azimuth encoder which is in degrees.
@@ -213,7 +214,7 @@ class CBPComponent:
         self.socket.sendall("alt=?\r".encode('ascii'))
         self.altitude = float(self.parse_reply())
 
-    def move_altitude(self,position: float):
+    def move_altitude(self, position: float):
         """This moves the vertical axis to the value that the user sent.
 
         Parameters
@@ -244,7 +245,7 @@ class CBPComponent:
         self.socket.sendall("foc=?\r".encode('ascii'))
         self.focus = float(self.parse_reply())
 
-    def change_focus(self,position: int):
+    def change_focus(self, position: int):
         """This changes the focus to whatever value the user sent.
 
         Parameters
@@ -305,7 +306,7 @@ class CBPComponent:
         self.socket.sendall("rot=?\r".encode('ascii'))
         self.mask_rotation = float(self.parse_reply())
 
-    def set_mask_rotation(self,mask_rotation: float):
+    def set_mask_rotation(self, mask_rotation: float):
         """This sets the mask rotation
 
         Parameters
@@ -357,7 +358,7 @@ class CBPComponent:
         self.socket.sendall("park=?\r".encode('ascii'))
         self.park = float(self.parse_reply())
 
-    def set_park(self, park: int=0):
+    def set_park(self, park: int = 0):
         """A function that tells the CBP to park or unpark depending on the value given.
 
         Parameters
@@ -370,7 +371,7 @@ class CBPComponent:
         None
 
         """
-        if park not in [0,1]:
+        if park not in [0, 1]:
             raise ValueError("park must be binary value that is either 1 or 0.")
         self.socket.sendall("park={0:f}\r".format(park).encode('ascii'))
         reply = self.socket.recv(128).decode('ascii', 'ignore')
@@ -409,6 +410,21 @@ class CBPComponent:
         self.get_mask()
         self.get_mask_rotation()
 
+    def configure(self, config):
+        self.config = config
+        self._address = self.config.address
+        self._port = self.config.port
+        self.masks.mask1.name = self.config.mask1.name
+        self.masks.mask1.rotation = self.config.mask1.rotation
+        self.masks.mask2.name = self.config.mask2.name
+        self.masks.mask2.rotation = self.config.mask2.rotation
+        self.masks.mask3.name = self.config.mask3.name
+        self.masks.mask3.rotation = self.config.mask3.rotation
+        self.masks.mask4.name = self.config.mask4.name
+        self.masks.mask4.rotation = self.config.mask4.rotation
+        self.masks.mask5.name = self.config.mask5.name
+        self.masks.mask5.rotation = self.config.mask5.rotation
+
     def publish(self):
         """This updates the attributes within the component.
 
@@ -423,21 +439,5 @@ class CBPComponent:
         self.check_auto_park()
         self.get_cbp_telemetry()
 
-
-def main():
-    """Is meant for developer functional testing.
-
-    Returns
-    -------
-
-    """
-    cbp = CBPComponent("140.252.33.12", 5000)
-    cbp.publish()
-    print(cbp.panic_status)
-    cbp.publish()
-    print(cbp.altitude)
-    cbp.move_altitude(0)
-
-
-if __name__ == '__main__':
-    main()
+    def set_simulation_mode(self, simulation_mode):
+        self.simulation_mode = simulation_mode

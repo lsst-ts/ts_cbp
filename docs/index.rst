@@ -3,24 +3,16 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to ts-cbp's documentation!
-==================================
+******
+ts_CBP
+******
+
+.. jsonschema:: ../schema/CBP.yaml 
 
 .. toctree::
-   :hidden:
-   :caption: Contents:
 
    intro
    user_guide
    api
    cli
-
-
-
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+   changelog

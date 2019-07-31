@@ -1,13 +1,15 @@
 from setuptools import setup
-
+setup_reqs = ['setuptools_scm']
+install_reqs = ['argh']
+test_reqs = ['pytest', 'pytest-flake8']
 setup(
     name="ts_cbp",
-    use_scm_version = True,
-    setup_requires=['setuptools_scm'],
-    install_requires=['pytest==3.2.1','sphinx==1.8.1','argh==0.26.2'],
-    dependency_links = ["git+git://github.com/lsst-ts/salobj.git@3.3.0#egg=salobj-3.3.0"],
+    use_scm_version=True,
+    setup_requires=setup_reqs,
+    install_requires=install_reqs,
     entry_points={
         'console_scripts': ['cbp_csc=lsst.ts.cbp.cli:main']
     },
+    extras_require={'dev': setup_reqs+install_reqs+test_reqs+['documenteer[pipelines]', 'sphinx-argparse']},
     packages=['lsst.ts.cbp'],
 )

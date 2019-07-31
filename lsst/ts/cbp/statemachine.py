@@ -1,14 +1,12 @@
-"""This module contains the logic for the CSC for CBP.
-
-"""
 import logging
-from lsst.ts.cbp.component import CBPComponent
+import pathlib
+from . import component
 import asyncio
 import SALPY_CBP
-from lsst.ts.salobj import *
+from lsst.ts import salobj
 
 
-class CBPCsc(BaseCsc):
+class CBPCsc(salobj.ConfigurableCsc):
     """This defines the CBP :term:`CSC` using ts_salobj.
 
     Parameters
@@ -58,13 +56,20 @@ class CBPCsc(BaseCsc):
         Topic for parked telemetry as defined in the XML.
 
     """
-    def __init__(self, port: str, address: int, frequency: float = 2, initial_state: State = State.STANDBY, speed=3.5,
-                 factor=1.25):
-        super().__init__(SALPY_CBP)
-        self.log = logging.getLogger(__name__)
-        self.log.debug("logger initialized")
+    def __init__(
+            self,
+            frequency: float = 2,
+            initial_state: salobj.State = salobj.State.STANDBY,
+            speed=3.5,
+            factor=1.25,
+            simulation_mode=0,
+            schema=pathlib.Path(__file__).parents[3].joinpath("schema", "CBP.yaml")):
+        super().__init__(
+            SALPY_CBP,
+            None,
+            schema)
         self.summary_state = initial_state
-        self.model = CBPModel(port, address)
+        self.model = CBPModel()
         self.frequency = frequency
         self.cbp_speed = speed
         self.factor = factor
@@ -201,7 +206,7 @@ class CBPCsc(BaseCsc):
         None
 
         """
-        pass # TODO: finish clearFault
+        pass  # TODO: finish clearFault
 
     async def do_enterControl(self, id_data):
         """
@@ -215,7 +220,7 @@ class CBPCsc(BaseCsc):
         None
 
         """
-        pass #TODO: finish enterControl
+        pass  # TODO: finish enterControl
 
     async def begin_enable(self, id_data):
         """Overrides the begin_enable function in salobj.BaseCsc to make sure the CBP is unparked.
@@ -231,158 +236,30 @@ class CBPCsc(BaseCsc):
         """
         self.model._cbp.set_park()
 
+    async def end_start(self, id_data):
+        self.model.connect()
+        self.telemetry_task = asyncio.ensure_future(self.telemetry())
 
-class CBPDeveloperRemote:
-    """This the class that provides an example of how to use the remote functionality for the CBP CSC.
+    async def end_standby(self, id_data):
+        self.telemetry_task.set_result('done')
+        self.model.disconnect()
 
-    Attributes
-    ----------
-    remote: salobj.Remote
-        The salobj remote that is used to send commands and receive events and telemetry.
+    def configure(self, config):
+        try:
+            self.model.configure(config)
+        except Exception as e:
+            self.log.error(e)
 
-    log: logging.Logger
-        This is the log for the current class.
+    def get_config_pkg(self):
+        return "ts_config_mtcalsys"
 
-    Warnings
-    -----
-    Not for production purposes.
-
-
-    """
-    def __init__(self):
-        self.remote = Remote(SALPY_CBP)
-        self.log = logging.getLogger(__name__)
-
-    async def standby(self, timeout=10):
-        """Calls and awaits the standby command. Logs the acknowledgement code from the command.
-
-        Returns
-        -------
-        None
-
-        """
-        standby_topic = self.remote.cmd_standby.DataType()
-        standby_ack = await self.remote.cmd_standby.start(standby_topic,timeout=timeout)
-        self.log.info(standby_ack.ack.ack)
-
-    async def disable(self, timeout=10):
-        """Calls and awaits the disable command and logs the acknowledgement code.
-
-        Returns
-        -------
-        None
-
-        """
-        disable_topic = self.remote.cmd_disable.DataType()
-        disable_ack = await self.remote.cmd_disable.start(disable_topic,timeout=timeout)
-        self.log.info(disable_ack.ack.ack)
-
-    async def start(self, timeout=10):
-        """Calls the start and awaits the result and logs the acknowledgement code.
-
-        Returns
-        -------
-        None
-
-        """
-        start_topic = self.remote.cmd_start.DataType()
-        start_ack = await self.remote.cmd_start.start(start_topic,timeout=timeout)
-        self.log.info(start_ack.ack.ack)
-
-    async def enable(self, timeout=10):
-        """Calls the enable command and awaits the result which logs the acknowledgement code.
-
-        Returns
-        -------
-        None
-
-        """
-        enable_topic = self.remote.cmd_enable.DataType()
-        enable_ack = await self.remote.cmd_enable.start(enable_topic,timeout=timeout)
-        self.log.info(enable_ack.ack.ack)
-
-    async def move_azimuth(self, azimuth, timeout=10):
-        """Calls the moveAzimuth command and awaits the result which logs the acknowledgement code.
-
-        Parameters
-        ----------
-        azimuth: float
-            The value of the azimuth to move to in degrees.
-
-        Returns
-        -------
-        None
-
-        """
-        move_azimuth_topic = self.remote.cmd_moveAzimuth.DataType()
-        move_azimuth_topic.azimuth = azimuth
-        move_azimuth_ack = await self.remote.cmd_moveAzimuth.start(move_azimuth_topic,timeout=timeout)
-        self.log.info(move_azimuth_ack.ack.ack)
-
-    async def move_altitude(self, altitude, timeout=10):
-        """Calls the moveAltitude command and awaits and logs the acknowledgement code.
-
-        Parameters
-        ----------
-        altitude: int
-            The altitude in degrees to move CBP to.
-
-        Returns
-        -------
-        None
-
-        """
-        move_altitude_topic = self.remote.cmd_moveAltitude.DataType()
-        move_altitude_topic.altitude = altitude
-        move_altitude_ack = await self.remote.cmd_moveAltitude.start(move_altitude_topic,timeout=timeout)
-        self.log.info(move_altitude_ack.ack.ack)
-
-    async def set_focus(self,focus, timeout=10):
-        """Sends the setFocus command and awaits and logs the acknowledgement code.
-
-        Parameters
-        ----------
-        focus: int
-            The focus in microns to set the focus encoder to.
-
-        Returns
-        -------
-        None
-
-        """
-        set_focus_topic = self.remote.cmd_setFocus.DataType()
-        set_focus_topic.focus = focus
-        set_focus_ack = await self.remote.cmd_setFocus.start(set_focus_topic,timeout=timeout)
-        self.log.info(set_focus_ack.ack.ack)
-
-    async def change_mask(self, mask, timeout=10):
-        """Calls the changeMask command and awaits and logs the acknowledgement code.
-
-        Parameters
-        ----------
-        mask: str
-            The string of the mask name to change to.
-        Returns
-        -------
-        None
-
-        """
-        change_mask_topic = self.remote.cmd_changeMask.DataType()
-        change_mask_topic.mask = mask
-        change_mask_ack = await self.remote.cmd_changeMask.start(change_mask_topic, timeout=timeout)
-        self.log.info(change_mask_ack.ack.ack)
-
-    async def park(self,timeout=10):
-        """Calls the park command and awaits and logs the acknowledgement code.
-
-        Returns
-        -------
-        None
-
-        """
-        park_topic = self.remote.cmd_park.DataType()
-        park_ack = await self.remote.cmd_park.start(park_topic,timeout=timeout)
-        self.log.info(park_ack.ack.ack)
+    async def implement_simulation_mode(self, simulation_mode):
+        if simulation_mode == 0:
+            self.model._cbp.set_simulation_mode(simulation_mode)
+        elif simulation_mode == 1:
+            self.model._cbp.set_simulation_mode(simulation_mode)
+        else:
+            raise salobj.ExpectedError(f"{simulation mode} is not a valid value")
 
 
 class CBPModel:
@@ -424,8 +301,8 @@ class CBPModel:
     parked: int
         The last updated parked attribute.
     """
-    def __init__(self,port: str, address: int):
-        self._cbp = CBPComponent(port, address)
+    def __init__(self):
+        self._cbp = component.CBPComponent()
         self.publish()
         self.azimuth = self._cbp.azimuth
         self.altitude = self._cbp.altitude
@@ -512,6 +389,15 @@ class CBPModel:
 
         """
         self._cbp.set_park(1)
+
+    def connect(self):
+        self._cbp.connect()
+
+    def disconnect(self):
+        self._cbp.disconnect()
+
+    def configure(self, config):
+        self._cbp.configure(config)
 
     def publish(self):
         """Calls the publish function of the component.
