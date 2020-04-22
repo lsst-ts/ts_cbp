@@ -1,4 +1,3 @@
-import logging
 import pathlib
 from . import component
 import asyncio
@@ -259,7 +258,7 @@ class CBPCsc(salobj.ConfigurableCsc):
         elif simulation_mode == 1:
             self.model._cbp.set_simulation_mode(simulation_mode)
         else:
-            raise salobj.ExpectedError(f"{simulation mode} is not a valid value")
+            raise salobj.ExpectedError(f"{simulation_mode} is not a valid value")
 
 
 class CBPModel:
