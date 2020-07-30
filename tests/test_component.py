@@ -19,7 +19,7 @@ class TestCbpComponent:
         cbp = CBPComponent()
         cbp._address = "localhost"
         cbp._port = 9999
-        time.sleep(7)
+        time.sleep(20)
         cbp.connect()
         return cbp
 
