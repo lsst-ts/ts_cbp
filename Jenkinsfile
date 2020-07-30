@@ -68,7 +68,7 @@ pipeline {
 
     post {
         always {
-            withEnv(["HOME=${env.WORKSPACE"]) {
+            withEnv(["HOME=${env.WORKSPACE}"]) {
                 sh 'chown -R 1003:1003 ${HOME}/'
             }
             // The path of xml needed by JUnit is relative to
