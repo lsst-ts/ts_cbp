@@ -1,16 +1,30 @@
 from lsst.ts.cbp.component import CBPComponent
 import pytest
-from unittest.mock import Mock
+import subprocess
+import time
+
+
+def setup_module(module):
+    module.simulator_process = subprocess.Popen(["lewis", "-k", "lsst.ts.cbp", "simulator"])
+
+
+def teardown_module(module):
+    module.simulator_process.terminate()
 
 
 class TestCbpComponent:
-    @pytest.fixture(scope="class")
+
+    @pytest.fixture(scope="module")
     def cbp(self):
         cbp = CBPComponent()
-        cbp.socket = Mock()
+        cbp._address = "localhost"
+        cbp._port = 9999
+        time.sleep(7)
+        cbp.connect()
         return cbp
 
     def test_parse_reply(self, cbp, mocker):
+        mocker.patch.object(cbp, 'socket')
         mocker.patch.object(cbp.socket, 'recv', return_value=b"5.5\r")
         reply = cbp.parse_reply()
         assert reply == "5.5"
@@ -24,8 +38,8 @@ class TestCbpComponent:
             ("4.0", "Not a mask 4"),
             ("5.0", "Not a mask 5"),
             ("9.0", "Unknown Mask")])
-    def test_get_mask(self, cbp, mocker, mask_float, expected_name):
-        mocker.patch.object(cbp, 'parse_reply', return_value=mask_float)
+    def test_get_mask(self, cbp, mask_float, expected_name):
+        cbp.set_mask(expected_name)
         cbp.get_mask()
         assert cbp.mask == expected_name
 
@@ -39,6 +53,7 @@ class TestCbpComponent:
             ("Not a mask 5", b"new_msk=5.000000"),
             ("Unknown Mask", b"new_msk=9.000000")])
     def test_set_mask(self, cbp, mask_name, mask_float):
+        cbp.set_mask(mask_name)
         assert "new_msk={0:f}".format(cbp.mask_dictionary[mask_name].id).encode('ascii') == mask_float
 
     @pytest.mark.parametrize("alt", [(-70), (46), (0)])

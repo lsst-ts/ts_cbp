@@ -111,3 +111,9 @@ venv.bak/
 dmypy.json
 
 .idea/*
+
+tests/.tests
+pytest_session.txt
+.cache/
+.pytest_cache
+.coverage
