@@ -19,6 +19,7 @@ pipeline {
         XML_REPORT="jenkinsReport/report.xml"
         MODULE_NAME="lsst.ts.cbp"
         work_branches = "${GIT_BRANCH} ${CHANGE_BRANCH} develop"
+
     }
 
     stages {
@@ -42,9 +43,7 @@ pipeline {
                         cd /home/saluser/repos/ts_idl
                         /home/saluser/.checkout_repo.sh ${work_branches}
                         git pull
-                        cd /home/saluser/repos
-                        git clone https://github.com/lsst-ts/ts_config_mtcalsys
-                        cd ts_config_mtcalsys
+                        cd /home/saluser/repos/ts_config_mtcalsys
                         /home/saluser/.checkout_repo.sh ${work_branches}
                         git pull
                         make_idl_files.py CBP
@@ -64,6 +63,7 @@ pipeline {
                 withEnv(["HOME=${env.WORKSPACE}"]) {
                     sh """
                         source /home/saluser/.setup_dev.sh
+                        export TS_CONFIG_MTCALSYS_DIR=/home/saluser/repos/ts_config_mtcalsys
                         pip install .[dev]
                         pip install -U scanf
                         pytest --cov-report html --cov=${env.MODULE_NAME} --junitxml=${env.XML_REPORT}
