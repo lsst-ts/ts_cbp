@@ -42,6 +42,11 @@ pipeline {
                         cd /home/saluser/repos/ts_idl
                         /home/saluser/.checkout_repo.sh ${work_branches}
                         git pull
+                        cd /home/saluser/repos
+                        git clone https://github.com/lsst-ts/ts_config_mtcalsys
+                        cd ts_config_mtcalsys
+                        /home/saluser/.checkout_repo.sh ${work_branches}
+                        git pull
                         make_idl_files.py CBP
                         pip install .[dev]
                     """
@@ -60,6 +65,7 @@ pipeline {
                     sh """
                         source /home/saluser/.setup_dev.sh
                         pip install .[dev]
+                        pip install -U scanf
                         pytest --cov-report html --cov=${env.MODULE_NAME} --junitxml=${env.XML_REPORT}
                     """
                 }
