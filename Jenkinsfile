@@ -59,6 +59,7 @@ pipeline {
                 withEnv(["HOME=${env.WORKSPACE}"]) {
                     sh """
                         source /home/saluser/.setup_dev.sh
+                        pip install .[dev]
                         pytest --cov-report html --cov=${env.MODULE_NAME} --junitxml=${env.XML_REPORT}
                     """
                 }
