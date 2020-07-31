@@ -92,7 +92,7 @@ class CBPCSC(salobj.ConfigurableCsc):
         self.assert_enabled("moveAzimuth")
         self.model.move_azimuth(data.azimuth)
         self.log.debug("moveAzimuth sent to model")
-        self.cmd_moveAzimuth.ackInProgress(data, "In progress")
+        self.cmd_moveAzimuth.ack_in_progress(data, "In progress")
         await asyncio.sleep(self.cbp_speed * self.factor)
 
     async def telemetry(self):
@@ -121,7 +121,7 @@ class CBPCSC(salobj.ConfigurableCsc):
             if self.model.panic_status == 1:
                 self.fault()
 
-            await asyncio.sleep(1)
+            await asyncio.sleep(self.heartbeat_interval)
 
     async def do_moveAltitude(self, data):
         """Moves the altitude axis of the CBP.
@@ -137,7 +137,7 @@ class CBPCSC(salobj.ConfigurableCsc):
         """
         self.assert_enabled("moveAltitude")
         self.model.move_altitude(data.altitude)
-        self.cmd_moveAltitude.ackInProgress(data, "In progress")
+        self.cmd_moveAltitude.ack_in_progress(data, "In progress")
         await asyncio.sleep(self.cbp_speed * self.factor)
 
     async def do_setFocus(self, data):
@@ -193,7 +193,7 @@ class CBPCSC(salobj.ConfigurableCsc):
         None
 
         """
-        pass  # TODO: finish clearFault
+        self.assert_enabled("clearFault")
 
     async def begin_enable(self, data):
         """Overrides the begin_enable function in salobj.BaseCsc to make sure the CBP is unparked.

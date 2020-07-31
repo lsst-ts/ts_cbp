@@ -17,7 +17,6 @@ build:
         - PYTHON_BUILD_LOCATION
         - LSST_DDS_DOMAIN
         - TS_CONFIG_MTCALSYS_DIR
-        # Replace with csc configuration repo directory, i.e. TS_CONFIG_ATTCS_DIR for athexapod
 
 test:
     requires:
