@@ -15,6 +15,7 @@ class CBPStreamInterface(StreamInterface):
         Cmd('set_mask_rotation', scanf("new_rot=%f"), argument_mappings=(float,)),
         Cmd('check_park', r'^park=\?$'),
         Cmd('set_park', scanf("park=%f"), argument_mappings=(float,)),
+        Cmd('check_auto_park', r'^autopark=\?$'),
         Cmd('check_panic', r'^wdpanic=\?$'),
         Cmd('check_encoder_1', r'^AAstat=\?$'),
         Cmd('check_encoder_2', r'^ABstat=\?$'),
@@ -62,6 +63,9 @@ class CBPStreamInterface(StreamInterface):
         return ""
 
     def check_park(self):
+        return self.device.status_parked
+
+    def check_auto_park(self):
         return self.device.status_parked
 
     def set_park(self, park):

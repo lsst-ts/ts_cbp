@@ -155,7 +155,7 @@ class CBPCSC(salobj.ConfigurableCsc):
         self.assert_enabled("setFocus")
         self.model.change_focus(data.focus)
 
-    async def do_park(self):
+    async def do_park(self, data):
         """Parks the CBP.
 
         Returns
