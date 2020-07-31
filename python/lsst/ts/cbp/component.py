@@ -99,7 +99,7 @@ class CBPComponent:
         self.mask = None
         self.mask_rotation = None
         self.masks = types.SimpleNamespace(
-            mask1=types.SimpleNamespace(name=f"Not a mask 1", rotation=0, id=1.),
+            mask1=types.SimpleNamespace(name="Not a mask 1", rotation=0, id=1.),
             mask2=types.SimpleNamespace(name="Not a mask 2", rotation=0, id=2.),
             mask3=types.SimpleNamespace(name="Not a mask 3", rotation=0, id=3.),
             mask4=types.SimpleNamespace(name="Not a mask 4", rotation=0, id=4.),
@@ -161,7 +161,7 @@ class CBPComponent:
         """
         try:
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.socket.settimeout(5)
+            self.socket.settimeout(10)
             self.socket.connect((self._address, self._port))
             self.log.debug("CBP connected to {0} on port {1}".format(self._address, self._port))
         except TimeoutError as te:
@@ -291,7 +291,7 @@ class CBPComponent:
         """
         if mask not in self.mask_dictionary:
             raise KeyError("Mask is not in dictionary, name may need to added or changed.")
-        self.socket.sendall("new_msk={0:f}".format(self.mask_dictionary[mask].id).encode('ascii'))
+        self.socket.sendall("new_msk={0:f}\r".format(self.mask_dictionary[mask].id).encode('ascii'))
         reply = self.socket.recv(128).decode('ascii', 'ignore')
         self.log.debug(reply)
 
@@ -321,7 +321,7 @@ class CBPComponent:
         """
         if mask_rotation < 0 or mask_rotation > 360:
             raise ValueError("New mask rotation value exceeds mask rotation limits.")
-        self.socket.sendall("new_rot={0:f}".format(mask_rotation).encode('ascii'))
+        self.socket.sendall("new_rot={0:f}\r".format(mask_rotation).encode('ascii'))
         reply = self.socket.recv(128).decode('ascii', 'ignore')
         self.log.debug(reply)
 

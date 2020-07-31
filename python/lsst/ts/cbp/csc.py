@@ -1,11 +1,10 @@
 import pathlib
 from . import component
 import asyncio
-import SALPY_CBP
 from lsst.ts import salobj
 
 
-class CBPCsc(salobj.ConfigurableCsc):
+class CBPCSC(salobj.ConfigurableCsc):
     """This defines the CBP :term:`CSC` using ts_salobj.
 
     Parameters
@@ -57,31 +56,27 @@ class CBPCsc(salobj.ConfigurableCsc):
     """
     def __init__(
             self,
-            frequency: float = 2,
             initial_state: salobj.State = salobj.State.STANDBY,
+            config_dir=None,
             speed=3.5,
             factor=1.25,
-            simulation_mode=0,
-            schema=pathlib.Path(__file__).parents[3].joinpath("schema", "CBP.yaml")):
+            simulation_mode=0):
+
+        schema_path = pathlib.Path(__file__).parents[4].joinpath("schema", "CBP.yaml")
+
         super().__init__(
-            SALPY_CBP,
-            None,
-            schema)
-        self.summary_state = initial_state
+            name="CBP",
+            index=0,
+            config_dir=config_dir,
+            initial_state=initial_state,
+            simulation_mode=simulation_mode,
+            schema_path=schema_path)
         self.model = CBPModel()
-        self.frequency = frequency
         self.cbp_speed = speed
         self.factor = factor
         self.log.info("CBP CSC initialized")
-        self.azimuth_topic = self.tel_azimuth.DataType()
-        self.altitude_topic = self.tel_altitude.DataType()
-        self.mask_topic = self.tel_mask.DataType()
-        self.focus_topic = self.tel_focus.DataType()
-        self.status_topic = self.tel_status.DataType()
-        self.parked_topic = self.tel_parked.DataType()
-        asyncio.ensure_future(self.azimuth_telemetry())
 
-    async def do_moveAzimuth(self, id_data):
+    async def do_moveAzimuth(self, data):
         """Moves the azimuth axis of the CBP.
 
         Parameters
@@ -95,12 +90,12 @@ class CBPCsc(salobj.ConfigurableCsc):
         """
         self.log.debug("Begin moveAzimuth")
         self.assert_enabled("moveAzimuth")
-        self.model.move_azimuth(id_data.data.azimuth)
+        self.model.move_azimuth(data.azimuth)
         self.log.debug("moveAzimuth sent to model")
-        self.cmd_moveAzimuth.ackInProgress(id_data, "In progress")
-        await asyncio.sleep(self.cbp_speed*self.factor)
+        self.cmd_moveAzimuth.ack_in_progress(data, "In progress")
+        await asyncio.sleep(self.cbp_speed * self.factor)
 
-    async def azimuth_telemetry(self):
+    async def telemetry(self):
         """Actually updates all of the sal telemetry objects.
 
         Returns
@@ -111,31 +106,24 @@ class CBPCsc(salobj.ConfigurableCsc):
         while True:
             self.log.debug("Begin sending telemetry")
             self.model.publish()
-            self.azimuth_topic.azimuth = self.model.azimuth
-            self.altitude_topic.altitude = self.model.altitude
-            self.mask_topic.mask = self.model.mask
-            self.mask_topic.mask_rotation = self.model.mask_rotation
-            self.focus_topic.focus = self.model.focus
-            self.status_topic.panic = self.model.panic_status
-            self.status_topic.azimuth = self.model.azimuth_status
-            self.status_topic.altitude = self.model.altitude_status
-            self.status_topic.mask = self.model.mask_status
-            self.status_topic.mask_rotation = self.model.mask_rotation_status
-            self.status_topic.focus = self.model.focus_status
-            self.parked_topic.autoparked = self.model.auto_parked
-            self.parked_topic.parked = self.model.parked
-            self.tel_azimuth.put(self.azimuth_topic)
-            self.tel_altitude.put(self.altitude_topic)
-            self.tel_mask.put(self.mask_topic)
-            self.tel_focus.put(self.focus_topic)
-            self.tel_status.put(self.status_topic)
-            self.tel_parked.put(self.parked_topic)
+            self.tel_azimuth.set_put(azimuth=self.model.azimuth)
+            self.tel_altitude.set_put(altitude=self.model.altitude)
+            self.tel_focus.set_put(focus=self.model.focus)
+            self.tel_mask.set_put(mask=self.model.mask, mask_rotation=self.model.mask_rotation)
+            self.tel_parked.set_put(autoparked=self.model.auto_parked, parked=self.model.parked)
+            self.tel_status.set_put(
+                panic=self.model.panic_status,
+                azimuth=self.model.azimuth_status,
+                altitude=self.model.altitude_status,
+                mask=self.model.mask_status,
+                mask_rotation=self.model.mask_rotation_status,
+                focus=self.model.focus_status)
             if self.model.panic_status == 1:
                 self.fault()
 
-            await asyncio.sleep(self.frequency)
+            await asyncio.sleep(self.heartbeat_interval)
 
-    async def do_moveAltitude(self, id_data):
+    async def do_moveAltitude(self, data):
         """Moves the altitude axis of the CBP.
 
         Parameters
@@ -148,11 +136,11 @@ class CBPCsc(salobj.ConfigurableCsc):
 
         """
         self.assert_enabled("moveAltitude")
-        self.model.move_altitude(id_data.data.altitude)
-        self.cmd_moveAltitude.ackInProgress(id_data, "In progress")
-        await asyncio.sleep(self.cbp_speed*self.factor)
+        self.model.move_altitude(data.altitude)
+        self.cmd_moveAltitude.ack_in_progress(data, "In progress")
+        await asyncio.sleep(self.cbp_speed * self.factor)
 
-    async def do_setFocus(self, id_data):
+    async def do_setFocus(self, data):
         """Sets the focus.
 
         Parameters
@@ -165,9 +153,9 @@ class CBPCsc(salobj.ConfigurableCsc):
 
         """
         self.assert_enabled("setFocus")
-        self.model.change_focus(id_data.data.focus)
+        self.model.change_focus(data.focus)
 
-    async def do_park(self):
+    async def do_park(self, data):
         """Parks the CBP.
 
         Returns
@@ -178,7 +166,7 @@ class CBPCsc(salobj.ConfigurableCsc):
         self.assert_enabled("park")
         self.model.park()
 
-    async def do_changeMask(self, id_data):
+    async def do_changeMask(self, data):
         """Changes the mask.
 
         Parameters
@@ -191,7 +179,7 @@ class CBPCsc(salobj.ConfigurableCsc):
 
         """
         self.assert_enabled("changeMask")
-        self.model.change_mask(id_data.data.mask)
+        self.model.change_mask(data.mask)
 
     async def do_clearFault(self, id_data):
         """
@@ -205,23 +193,9 @@ class CBPCsc(salobj.ConfigurableCsc):
         None
 
         """
-        pass  # TODO: finish clearFault
+        self.assert_enabled("clearFault")
 
-    async def do_enterControl(self, id_data):
-        """
-
-        Parameters
-        ----------
-        id_data
-
-        Returns
-        -------
-        None
-
-        """
-        pass  # TODO: finish enterControl
-
-    async def begin_enable(self, id_data):
+    async def begin_enable(self, data):
         """Overrides the begin_enable function in salobj.BaseCsc to make sure the CBP is unparked.
 
         Parameters
@@ -235,21 +209,22 @@ class CBPCsc(salobj.ConfigurableCsc):
         """
         self.model._cbp.set_park()
 
-    async def end_start(self, id_data):
+    async def end_start(self, data):
         self.model.connect()
         self.telemetry_task = asyncio.ensure_future(self.telemetry())
 
-    async def end_standby(self, id_data):
-        self.telemetry_task.set_result('done')
+    async def end_standby(self, data):
+        self.telemetry_task.cancel()
         self.model.disconnect()
 
-    def configure(self, config):
+    async def configure(self, config):
         try:
             self.model.configure(config)
         except Exception as e:
             self.log.error(e)
 
-    def get_config_pkg(self):
+    @staticmethod
+    def get_config_pkg():
         return "ts_config_mtcalsys"
 
     async def implement_simulation_mode(self, simulation_mode):
@@ -302,7 +277,6 @@ class CBPModel:
     """
     def __init__(self):
         self._cbp = component.CBPComponent()
-        self.publish()
         self.azimuth = self._cbp.azimuth
         self.altitude = self._cbp.altitude
         self.mask = self._cbp.mask
