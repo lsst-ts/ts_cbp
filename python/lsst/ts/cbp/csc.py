@@ -3,55 +3,45 @@ from . import component
 import asyncio
 from lsst.ts import salobj
 
+__all__ = ["CBPCSC", "CBPModel"]
+
 
 class CBPCSC(salobj.ConfigurableCsc):
-    """This defines the CBP :term:`CSC` using ts_salobj.
+    """This defines the CBP CSC using ts_salobj.
 
     Parameters
     ----------
-    port: str
+    port : `str`
         This is the ip address of the CBP.
 
-    address: int
+    address : `int`
         This is the port of the CBP
 
-    frequency: float
-        This is the amount of seconds to query the device for telemetry.
+    speed : `float`
+        The amount of time it takes to move the CBP into place.
 
-    initial_state: salobj.State
+    factor : `float`
+        The factor to multiply the speed of the CBP.
+
+    initial_state : `salobj.State`
         The initial state of the csc, typically STANDBY or OFFLINE
 
     Attributes
     ----------
-    log: logging.Logger
+    log : `logging.Logger`
         This is the log for the class.
 
-    summary_state: salobj.State
+    summary_state : `salobj.State`
         This is the current state for the csc.
 
-    model: CBPModel
+    model : `CBPModel`
         This is the model that links the component to the CSC.
 
-    frequency: float
-        The amount of time in seconds to wait for querying the device.
+    cbp_speed : `float`
+        The amount of time that it takes to move CBP's axii.
 
-    azimuth_topic: salobj.ControllerTelemetry
-        topic for the azimuth telemetry as defined in the XML.
-
-    altitude_topic: salobj.ControllerTelemetry
-        topic for altitude telemetry as defined in the XML.
-
-    mask_topic: salobj.ControllerTelemetry
-        Topic for mask telemetry as defined in the XML.
-
-    focus_topic: salobj.ControllerTelemetry
-        Topic for focus telemetry as defined in the XML.
-
-    status_topic: salobj.ControllerTelemetry
-        Topic for status telemetry as defined in the XML.
-
-    parked_topic: salobj.ControllerTelemetry
-        Topic for parked telemetry as defined in the XML.
+    factor : `float`
+        The factor to add to the speed of the CBP.
 
     """
     def __init__(
@@ -81,7 +71,7 @@ class CBPCSC(salobj.ConfigurableCsc):
 
         Parameters
         ----------
-        id_data
+        data
 
         Returns
         -------
@@ -128,7 +118,7 @@ class CBPCSC(salobj.ConfigurableCsc):
 
         Parameters
         ----------
-        id_data
+        data
 
         Returns
         -------
@@ -145,7 +135,7 @@ class CBPCSC(salobj.ConfigurableCsc):
 
         Parameters
         ----------
-        id_data
+        data
 
         Returns
         -------
@@ -171,7 +161,7 @@ class CBPCSC(salobj.ConfigurableCsc):
 
         Parameters
         ----------
-        id_data
+        data
 
         Returns
         -------
@@ -181,12 +171,12 @@ class CBPCSC(salobj.ConfigurableCsc):
         self.assert_enabled("changeMask")
         self.model.change_mask(data.mask)
 
-    async def do_clearFault(self, id_data):
+    async def do_clearFault(self, data):
         """
 
         Parameters
         ----------
-        id_data
+        data
 
         Returns
         -------
@@ -200,7 +190,7 @@ class CBPCSC(salobj.ConfigurableCsc):
 
         Parameters
         ----------
-        id_data
+        data
 
         Returns
         -------
@@ -239,40 +229,33 @@ class CBPCSC(salobj.ConfigurableCsc):
 class CBPModel:
     """This is the model that connects the CSC and the component together.
 
-    Parameters
-    ----------
-    port: str
-        The ip address of the CBP.
-    address: int
-        The port of the CBP.
-
     Attributes
     ----------
-    azimuth: float
+    azimuth : `float`
         The last updated position of the azimuth encoder
-    altitude: float
+    altitude : `float`
         The last updated position of the altitude encoder
-    mask: str
+    mask : `str`
         The last updated mask name of the mask encoder.
-    mask_rotation: float
+    mask_rotation : `float`
         The last updated mask rotation of the rotation encoder.
-    focus: float
+    focus : `float`
         The last updated focus of the focus encoder.
-    panic_status: int
+    panic_status : `int`
         The last updated panic_status of the status byte.
-    azimuth_status: int
+    azimuth_status : `int`
         The last updated azimuth_status of the status byte.
-    altitude_status: int
+    altitude_status : `int`
         The last updated altitude_status of the status byte.
-    mask_status: int
+    mask_status : `int`
         The last updated mask_status of the status byte.
-    mask_rotation_status: int
+    mask_rotation_status : `int`
         The last updated mask_rotation_status of the status byte.
-    focus_status: int
+    focus_status : `int`
         The last updated focus_status of the status byte.
-    auto_parked: int
+    auto_parked : `int`
         The last updated auto_parked attribute.
-    parked: int
+    parked : `int`
         The last updated parked attribute.
     """
     def __init__(self):

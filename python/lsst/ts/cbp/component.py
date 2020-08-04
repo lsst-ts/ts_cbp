@@ -1,9 +1,8 @@
-"""This module is for implementing the component logic for the CBP.
-
-"""
 import logging
 import socket
 import types
+
+__all__ = ["CBPComponent"]
 
 
 class CBPComponent:
@@ -14,44 +13,44 @@ class CBPComponent:
 
     Parameters
     ----------
-    address : str
+    address : `str`
        The ip address of the CBP galil controller.
-    port : int
+    port : `int`
         The port to connect to the CBP galil controller.
 
     Attributes
     ----------
-    log: logging.Logger
+    log : `logging.Logger`
         The logger for the component
 
-    socket: socket.Socket
+    socket : `socket.Socket`
         The socket that handles the TCP/IP connection for the CBP
 
-    altitude: float
+    altitude : `float`
         The value of the CBP altitude encoder in degress.
 
-    azimuth: float
+    azimuth : `float`
         The value of the CBP azimuth encoder in degrees.
 
-    mask: str
+    mask : `str`
         The current mask as named in the mask_dictionary
 
-    mask_rotation: float
+    mask_rotation : `float`
         The current value of the mask rotation encoder in degrees.
 
-    masks: SimpleNamespace
+    masks : `SimpleNamespace`
         A simplenamespace that contains the mask names and rotation values along with the id.
 
-    focus: float
+    focus : `float`
         The current value of the focus encoder in microns.
 
-    panic_status: float
+    panic_status : `float`
         The current value of the panic variable in the CBP dmc code.
         A non-zero value represents a panic state and causes the motors to cease functioning until panic is
         dealt with or goes away.
         This status is related to the other statuses.
 
-    auto_park: float
+    auto_park : `float`
         The current value of the auto_park variable.
         If this value is one, that means that CBP suffered a power loss that lasted more than 12 seconds and
         was on battery back up.
@@ -59,30 +58,30 @@ class CBPComponent:
         and mask.
         To unpark CBP, the park variable should be set to zero.
 
-    park: float
+    park : `float`
         The current value of the park variable.
         This value can be set to one or zero, if set to one it will park the CBP if set to zero it will
         unpark.
 
-    azimuth_status: float
+    azimuth_status : `float`
         This is the current value of the status of the azimuth encoder.
-        If this value is non-zero, the encoder has an :ref:`error<intro:Errors>`.
+        If this value is non-zero, the encoder has an error.
 
-    altitude_status: float
+    altitude_status : `float`
         This is the current value of the status of the altitude encoder.
-        If this value is non-zero, the encoder has an :ref:`error<intro:Errors>`.
+        If this value is non-zero, the encoder has an error.
 
-    mask_select_status: float
+    mask_select_status : `float`
         This is the current value of the status of the mask selection encoder.
-        If this value is non-zero, the encoder has an :ref:`error<intro:Errors>`.
+        If this value is non-zero, the encoder has an error.
 
-    mask_rotate_status: float
+    mask_rotate_status : `float`
         This is the current value of the status of the mask rotation encoder.
-        If this value is non-zero, the encoder has an :ref:`error<intro:Errors>`.
+        If this value is non-zero, the encoder has an error.
 
-    focus_status: float
+    focus_status : `float`
         This is the current value of the status of the focus encoder.
-        If this value is non-zero, the encoder has an :ref:`error<intro:Errors>`.
+        If this value is non-zero, the encoder has an error.
 
     Notes
     -----
