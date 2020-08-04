@@ -33,7 +33,7 @@ pipeline {
                 // to install the packages.
                 withEnv(["HOME=${env.WORKSPACE}"]) {
                     sh """
-                        source /home/saluser/.setup_dev.sh
+                        source /home/saluser/.setup_dev.sh || echo loading env failed. Continuing...
                         cd /home/saluser/repos/ts_xml
                         /home/saluser/.checkout_repo.sh ${work_branches}
                         git pull
@@ -66,7 +66,7 @@ pipeline {
                 // Pytest needs to export the junit report.
                 withEnv(["HOME=${env.WORKSPACE}"]) {
                     sh """
-                        source /home/saluser/.setup_dev.sh
+                        source /home/saluser/.setup_dev.sh || echo loading env failed. Continuing...
                         export TS_CONFIG_MTCALSYS_DIR=/home/saluser/repos/ts_config_mtcalsys
                         cd $HOME
                         pip install .[dev]
@@ -80,7 +80,7 @@ pipeline {
             steps {
                 withEnv(["HOME=${env.WORKSPACE}"]) {
                     sh """
-                    source /home/saluser/.setup_dev.sh
+                    source /home/saluser/.setup_dev.sh || echo loading env failed. Continuing...
                     pip install .[dev]
                     package-docs build
                     ltd upload --product ts-cbp --git-ref ${GIT_BRANCH} --dir doc/_build/html
