@@ -2,7 +2,7 @@
 
 """
 
-from . import csc, component, version
+from . import csc, component
 from .csc import *
 from .component import *
 
