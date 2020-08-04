@@ -5,3 +5,8 @@
 from . import csc, component, version
 from .csc import *
 from .component import *
+
+try:
+    from .version import *
+except ImportError:
+    __version__ = "?"
