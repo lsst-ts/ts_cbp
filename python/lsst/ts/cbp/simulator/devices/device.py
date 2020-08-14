@@ -27,25 +27,35 @@ class SimulatedCBP(StateMachineDevice):
 
     def _get_state_handlers(self):
         return {
-            'idle': State(),
-            'moving': states.DefaultMovingState(),
-            'parked': states.DefaultParkedState()
+            "idle": State(),
+            "moving": states.DefaultMovingState(),
+            "parked": states.DefaultParkedState(),
         }
 
     def _get_initial_state(self):
-        return 'idle'
+        return "idle"
 
     def _get_transition_handlers(self):
-        return OrderedDict([
-            (('idle', 'moving'), lambda: (
-                self.azimuth != self.target_azimuth or
-                self.altitude != self.target_altitude or
-                self.mask_rotation != self.target_mask_rotation)),
-            (('moving', 'idle'), lambda: (
-                self.azimuth == self.target_azimuth or
-                self.altitude == self.target_altitude or
-                self.mask_rotation == self.target_mask_rotation))
-        ])
+        return OrderedDict(
+            [
+                (
+                    ("idle", "moving"),
+                    lambda: (
+                        self.azimuth != self.target_azimuth
+                        or self.altitude != self.target_altitude
+                        or self.mask_rotation != self.target_mask_rotation
+                    ),
+                ),
+                (
+                    ("moving", "idle"),
+                    lambda: (
+                        self.azimuth == self.target_azimuth
+                        or self.altitude == self.target_altitude
+                        or self.mask_rotation == self.target_mask_rotation
+                    ),
+                ),
+            ]
+        )
 
     @property
     def state(self):

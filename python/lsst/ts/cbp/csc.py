@@ -38,19 +38,21 @@ class CBPCSC(salobj.ConfigurableCsc):
         This is the model that links the component to the CSC.
 
     cbp_speed : `float`
-        The amount of time that it takes to move CBP's axii.
+        The amount of time that it takes to move CBP's axes.
 
     factor : `float`
         The factor to add to the speed of the CBP.
 
     """
+
     def __init__(
-            self,
-            initial_state: salobj.State = salobj.State.STANDBY,
-            config_dir=None,
-            speed=3.5,
-            factor=1.25,
-            simulation_mode=0):
+        self,
+        initial_state: salobj.State = salobj.State.STANDBY,
+        config_dir=None,
+        speed=3.5,
+        factor=1.25,
+        simulation_mode=0,
+    ):
 
         schema_path = pathlib.Path(__file__).parents[4].joinpath("schema", "CBP.yaml")
 
@@ -60,7 +62,8 @@ class CBPCSC(salobj.ConfigurableCsc):
             config_dir=config_dir,
             initial_state=initial_state,
             simulation_mode=simulation_mode,
-            schema_path=schema_path)
+            schema_path=schema_path,
+        )
         self.model = CBPModel()
         self.cbp_speed = speed
         self.factor = factor
@@ -99,15 +102,20 @@ class CBPCSC(salobj.ConfigurableCsc):
             self.tel_azimuth.set_put(azimuth=self.model.azimuth)
             self.tel_altitude.set_put(altitude=self.model.altitude)
             self.tel_focus.set_put(focus=self.model.focus)
-            self.tel_mask.set_put(mask=self.model.mask, mask_rotation=self.model.mask_rotation)
-            self.tel_parked.set_put(autoparked=self.model.auto_parked, parked=self.model.parked)
+            self.tel_mask.set_put(
+                mask=self.model.mask, mask_rotation=self.model.mask_rotation
+            )
+            self.tel_parked.set_put(
+                autoparked=self.model.auto_parked, parked=self.model.parked
+            )
             self.tel_status.set_put(
                 panic=self.model.panic_status,
                 azimuth=self.model.azimuth_status,
                 altitude=self.model.altitude_status,
                 mask=self.model.mask_status,
                 mask_rotation=self.model.mask_rotation_status,
-                focus=self.model.focus_status)
+                focus=self.model.focus_status,
+            )
             if self.model.panic_status == 1:
                 self.fault()
 
@@ -258,6 +266,7 @@ class CBPModel:
     parked : `int`
         The last updated parked attribute.
     """
+
     def __init__(self):
         self._cbp = component.CBPComponent()
         self.azimuth = self._cbp.azimuth

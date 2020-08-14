@@ -85,7 +85,7 @@ Starting the simulator
     
 :kbd:`ctrl+c` to exit the simulator.
 
-This simulator does not park properly.
+This simulator does not have the park mode implemented yet.
 Limits have not been added, but the component code checks the limits anyway.
 
 
@@ -94,7 +94,9 @@ Limits have not been added, but the component code checks the limits anyway.
 Updating Firmware of the CBP
 ==================================================
 
-.. note:: Fill out with correct info.
+1. Download ``Galil Design Kit``
+2. Edit dmc code
+3. Click Download program to hardware
 
 
 .. _Documentation:

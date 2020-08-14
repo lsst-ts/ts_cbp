@@ -67,7 +67,9 @@ Overview
 
 :ref:`Contact info <ts_xml:index:master-csc-table:CBP>`
 
-The Collimated Beam Projector(CBP) is a Commandable SAL Component that provides horizontal and vertical axis control of an integrating sphere in conjunction with a light source for calibrating the Main Telescope.
+`Docushare collection <https://docushare.lsst.org/docushare/dsweb/View/Collection-6513>`_
+
+The Collimated Beam Projector(CBP) is a Commandable SAL Component that provides horizontal and vertical axis control of an integrating sphere in conjunction with a projecting light source for calibrating the Main Telescope.
 Primarily, commands deal with moving the CBP in the azimuth and altitude directions and changing the masks.
 The CBP will be used as part of the Calibration system of the Main Telescope.
 
