@@ -1,1 +1,1 @@
-framework_version = '1.2.2'
+framework_version = "1.2.2"

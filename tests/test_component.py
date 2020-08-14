@@ -5,7 +5,9 @@ import time
 
 
 def setup_module(module):
-    module.simulator_process = subprocess.Popen(["lewis", "-k", "lsst.ts.cbp", "simulator"])
+    module.simulator_process = subprocess.Popen(
+        ["lewis", "-k", "lsst.ts.cbp", "simulator"]
+    )
 
 
 def teardown_module(module):
@@ -13,7 +15,6 @@ def teardown_module(module):
 
 
 class TestCbpComponent:
-
     @pytest.fixture(scope="module")
     def cbp(self):
         cbp = CBPComponent()
@@ -24,8 +25,8 @@ class TestCbpComponent:
         return cbp
 
     def test_parse_reply(self, cbp, mocker):
-        mocker.patch.object(cbp, 'socket')
-        mocker.patch.object(cbp.socket, 'recv', return_value=b"5.5\r")
+        mocker.patch.object(cbp, "socket")
+        mocker.patch.object(cbp.socket, "recv", return_value=b"5.5\r")
         reply = cbp.parse_reply()
         assert reply == "5.5"
 
@@ -37,7 +38,9 @@ class TestCbpComponent:
             ("3.0", "Not a mask 3"),
             ("4.0", "Not a mask 4"),
             ("5.0", "Not a mask 5"),
-            ("9.0", "Unknown Mask")])
+            ("9.0", "Unknown Mask"),
+        ],
+    )
     def test_get_mask(self, cbp, mask_float, expected_name):
         cbp.set_mask(expected_name)
         cbp.get_mask()
@@ -51,10 +54,15 @@ class TestCbpComponent:
             ("Not a mask 3", b"new_msk=3.000000"),
             ("Not a mask 4", b"new_msk=4.000000"),
             ("Not a mask 5", b"new_msk=5.000000"),
-            ("Unknown Mask", b"new_msk=9.000000")])
+            ("Unknown Mask", b"new_msk=9.000000"),
+        ],
+    )
     def test_set_mask(self, cbp, mask_name, mask_float):
         cbp.set_mask(mask_name)
-        assert "new_msk={0:f}".format(cbp.mask_dictionary[mask_name].id).encode('ascii') == mask_float
+        assert (
+            "new_msk={0:f}".format(cbp.mask_dictionary[mask_name].id).encode("ascii")
+            == mask_float
+        )
 
     @pytest.mark.parametrize("alt", [(-70), (46), (0)])
     def test_move_altitude(self, cbp, alt):

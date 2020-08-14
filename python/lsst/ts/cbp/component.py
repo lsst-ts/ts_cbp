@@ -90,6 +90,7 @@ class CBPComponent:
     CBP.
     The underlying api is built on :term:`DMC`.
     """
+
     def __init__(self):
         self.log = logging.getLogger(__name__)
         self.socket = None
@@ -98,26 +99,28 @@ class CBPComponent:
         self.mask = None
         self.mask_rotation = None
         self.masks = types.SimpleNamespace(
-            mask1=types.SimpleNamespace(name="Not a mask 1", rotation=0, id=1.),
-            mask2=types.SimpleNamespace(name="Not a mask 2", rotation=0, id=2.),
-            mask3=types.SimpleNamespace(name="Not a mask 3", rotation=0, id=3.),
-            mask4=types.SimpleNamespace(name="Not a mask 4", rotation=0, id=4.),
-            mask5=types.SimpleNamespace(name="Not a mask 5", rotation=0, id=5.),
-            mask9=types.SimpleNamespace(name="Unknown Mask", rotation=0, id=9.))
+            mask1=types.SimpleNamespace(name="Not a mask 1", rotation=0, id=1.0),
+            mask2=types.SimpleNamespace(name="Not a mask 2", rotation=0, id=2.0),
+            mask3=types.SimpleNamespace(name="Not a mask 3", rotation=0, id=3.0),
+            mask4=types.SimpleNamespace(name="Not a mask 4", rotation=0, id=4.0),
+            mask5=types.SimpleNamespace(name="Not a mask 5", rotation=0, id=5.0),
+            mask9=types.SimpleNamespace(name="Unknown Mask", rotation=0, id=9.0),
+        )
         self.mask_dictionary = {
             self.masks.mask1.name: self.masks.mask1,
             self.masks.mask2.name: self.masks.mask2,
             self.masks.mask3.name: self.masks.mask3,
             self.masks.mask4.name: self.masks.mask4,
             self.masks.mask5.name: self.masks.mask5,
-            self.masks.mask9.name: self.masks.mask9}
+            self.masks.mask9.name: self.masks.mask9,
+        }
         self.mask_id_dictionary = {
             self.masks.mask1.id: self.masks.mask1,
             self.masks.mask2.id: self.masks.mask2,
             self.masks.mask3.id: self.masks.mask3,
             self.masks.mask4.id: self.masks.mask4,
             self.masks.mask5.id: self.masks.mask5,
-            self.masks.mask9.id: self.masks.mask9
+            self.masks.mask9.id: self.masks.mask9,
         }
         self.focus = None
         self._address = None
@@ -143,7 +146,7 @@ class CBPComponent:
 
         """
         if self.simulation_mode == 0:
-            parsed_reply = self.socket.recv(128).decode('ascii').split("\r")[0]
+            parsed_reply = self.socket.recv(128).decode("ascii").split("\r")[0]
         elif self.simulation_mode == 1:
             parsed_reply = "0"
         return parsed_reply
@@ -162,7 +165,9 @@ class CBPComponent:
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.socket.settimeout(10)
             self.socket.connect((self._address, self._port))
-            self.log.debug("CBP connected to {0} on port {1}".format(self._address, self._port))
+            self.log.debug(
+                "CBP connected to {0} on port {1}".format(self._address, self._port)
+            )
         except TimeoutError as te:
             self.log.error("Socket timed out")
             raise te
@@ -178,7 +183,7 @@ class CBPComponent:
         -------
 
         """
-        self.socket.sendall("az=?\r".encode('ascii'))
+        self.socket.sendall("az=?\r".encode("ascii"))
         self.azimuth = float(self.parse_reply())
 
     def move_azimuth(self, position: float):
@@ -197,8 +202,8 @@ class CBPComponent:
         if position < -45 or position > 45:
             raise ValueError("New azimuth value exceeds Azimuth limit.")
         else:
-            self.socket.sendall("new_az={0:f}\r".format(position).encode('ascii'))
-            reply = self.socket.recv(128).decode('ascii', 'ignore')
+            self.socket.sendall("new_az={0:f}\r".format(position).encode("ascii"))
+            reply = self.socket.recv(128).decode("ascii", "ignore")
             self.log.debug(reply)
 
     def get_altitude(self):
@@ -210,7 +215,7 @@ class CBPComponent:
 
         """
         self.log.debug("get_altitude sent")
-        self.socket.sendall("alt=?\r".encode('ascii'))
+        self.socket.sendall("alt=?\r".encode("ascii"))
         self.altitude = float(self.parse_reply())
 
     def move_altitude(self, position: float):
@@ -229,8 +234,8 @@ class CBPComponent:
         if position < -69 or position > 45:
             raise ValueError("New altitude value exceeds altitude limit.")
         else:
-            self.socket.sendall("new_alt={0:f}\r".format(position).encode('ascii'))
-            reply = self.socket.recv(128).decode('ascii', 'ignore')
+            self.socket.sendall("new_alt={0:f}\r".format(position).encode("ascii"))
+            reply = self.socket.recv(128).decode("ascii", "ignore")
             self.log.debug(reply)
 
     def get_focus(self):
@@ -241,7 +246,7 @@ class CBPComponent:
         None
 
         """
-        self.socket.sendall("foc=?\r".encode('ascii'))
+        self.socket.sendall("foc=?\r".encode("ascii"))
         self.focus = float(self.parse_reply())
 
     def change_focus(self, position: int):
@@ -260,8 +265,8 @@ class CBPComponent:
         if position < 0 or position > 13000:
             raise ValueError("New focus value exceeds focus limit.")
         else:
-            self.socket.sendall("new_foc={0:f}\r".format(position).encode('ascii'))
-            reply = self.socket.recv(128).decode('ascii', 'ignore')
+            self.socket.sendall("new_foc={0:f}\r".format(position).encode("ascii"))
+            reply = self.socket.recv(128).decode("ascii", "ignore")
             self.log.debug(reply)
 
     def get_mask(self):
@@ -272,7 +277,7 @@ class CBPComponent:
         None
 
         """
-        self.socket.sendall("msk=?\r".encode('ascii'))
+        self.socket.sendall("msk=?\r".encode("ascii"))
         self.mask = self.mask_id_dictionary[float(self.parse_reply())].name
 
     def set_mask(self, mask: str):
@@ -289,9 +294,13 @@ class CBPComponent:
 
         """
         if mask not in self.mask_dictionary:
-            raise KeyError("Mask is not in dictionary, name may need to added or changed.")
-        self.socket.sendall("new_msk={0:f}\r".format(self.mask_dictionary[mask].id).encode('ascii'))
-        reply = self.socket.recv(128).decode('ascii', 'ignore')
+            raise KeyError(
+                "Mask is not in dictionary, name may need to added or changed."
+            )
+        self.socket.sendall(
+            "new_msk={0:f}\r".format(self.mask_dictionary[mask].id).encode("ascii")
+        )
+        reply = self.socket.recv(128).decode("ascii", "ignore")
         self.log.debug(reply)
 
     def get_mask_rotation(self):
@@ -302,7 +311,7 @@ class CBPComponent:
         None
 
         """
-        self.socket.sendall("rot=?\r".encode('ascii'))
+        self.socket.sendall("rot=?\r".encode("ascii"))
         self.mask_rotation = float(self.parse_reply())
 
     def set_mask_rotation(self, mask_rotation: float):
@@ -320,8 +329,8 @@ class CBPComponent:
         """
         if mask_rotation < 0 or mask_rotation > 360:
             raise ValueError("New mask rotation value exceeds mask rotation limits.")
-        self.socket.sendall("new_rot={0:f}\r".format(mask_rotation).encode('ascii'))
-        reply = self.socket.recv(128).decode('ascii', 'ignore')
+        self.socket.sendall("new_rot={0:f}\r".format(mask_rotation).encode("ascii"))
+        reply = self.socket.recv(128).decode("ascii", "ignore")
         self.log.debug(reply)
 
     def check_panic_status(self):
@@ -332,7 +341,7 @@ class CBPComponent:
         None
 
         """
-        self.socket.sendall("wdpanic=?\r".encode('ascii'))
+        self.socket.sendall("wdpanic=?\r".encode("ascii"))
         self.panic_status = float(self.parse_reply())
 
     def check_auto_park(self):
@@ -343,7 +352,7 @@ class CBPComponent:
         None
 
         """
-        self.socket.sendall("autopark=?\r".encode('ascii'))
+        self.socket.sendall("autopark=?\r".encode("ascii"))
         self.auto_park = float(self.parse_reply())
 
     def check_park(self):
@@ -354,7 +363,7 @@ class CBPComponent:
         None
 
         """
-        self.socket.sendall("park=?\r".encode('ascii'))
+        self.socket.sendall("park=?\r".encode("ascii"))
         self.park = float(self.parse_reply())
 
     def set_park(self, park: int = 0):
@@ -372,8 +381,8 @@ class CBPComponent:
         """
         if park not in [0, 1]:
             raise ValueError("park must be binary value that is either 1 or 0.")
-        self.socket.sendall("park={0:f}\r".format(park).encode('ascii'))
-        reply = self.socket.recv(128).decode('ascii', 'ignore')
+        self.socket.sendall("park={0:f}\r".format(park).encode("ascii"))
+        reply = self.socket.recv(128).decode("ascii", "ignore")
         self.log.debug(reply)
 
     def check_cbp_status(self):
@@ -384,15 +393,15 @@ class CBPComponent:
         None
 
         """
-        self.socket.sendall("AAstat=?\r".encode('ascii'))
+        self.socket.sendall("AAstat=?\r".encode("ascii"))
         self.azimuth_status = float(self.parse_reply())
-        self.socket.sendall("ABstat=?\r".encode('ascii'))
+        self.socket.sendall("ABstat=?\r".encode("ascii"))
         self.altitude_status = float(self.parse_reply())
-        self.socket.sendall("ACstat=?\r".encode('ascii'))
+        self.socket.sendall("ACstat=?\r".encode("ascii"))
         self.mask_select_status = float(self.parse_reply())
-        self.socket.sendall("ADstat=?\r".encode('ascii'))
+        self.socket.sendall("ADstat=?\r".encode("ascii"))
         self.mask_rotate_status = float(self.parse_reply())
-        self.socket.sendall("AEstat=?\r".encode('ascii'))
+        self.socket.sendall("AEstat=?\r".encode("ascii"))
         self.focus_status = float(self.parse_reply())
 
     def get_cbp_telemetry(self):

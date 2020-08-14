@@ -23,7 +23,9 @@ class Harness:
 
 class CscTestCase(asynctest.TestCase, salobj.BaseCscTestCase):
     def setUp(self):
-        self.simulator_process = subprocess.Popen(["lewis", "-k", "lsst.ts.cbp", "simulator"])
+        self.simulator_process = subprocess.Popen(
+            ["lewis", "-k", "lsst.ts.cbp", "simulator"]
+        )
 
     def tearDown(self):
         self.simulator_process.terminate()
@@ -40,5 +42,7 @@ class CscTestCase(asynctest.TestCase, salobj.BaseCscTestCase):
                     "moveAltitude",
                     "moveAzimuth",
                     "park",
-                    "setFocus"),
-                skip_commands=("fault",))
+                    "setFocus",
+                ),
+                skip_commands=("fault",),
+            )
