@@ -114,12 +114,16 @@ dmypy.json
 .idea/*
 .vscode
 
-# sconsUtils
+# pytest 
 tests/.tests
 pytest_session.txt
 .cache/
 .pytest_cache
 .coverage
+
+# setuptools_scm or sconsUtils
 version.py
+
+# sconsUtils
 .sconsign.dblite
 .sconf_temp

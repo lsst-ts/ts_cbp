@@ -43,6 +43,5 @@ class CscTestCase(asynctest.TestCase, salobj.BaseCscTestCase):
                     "moveAzimuth",
                     "park",
                     "setFocus",
-                ),
-                skip_commands=("fault",),
+                )
             )

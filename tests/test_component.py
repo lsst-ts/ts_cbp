@@ -33,34 +33,34 @@ class TestCbpComponent:
     @pytest.mark.parametrize(
         "mask_float, expected_name",
         [
-            ("1.0", "Not a mask 1"),
-            ("2.0", "Not a mask 2"),
-            ("3.0", "Not a mask 3"),
-            ("4.0", "Not a mask 4"),
-            ("5.0", "Not a mask 5"),
-            ("9.0", "Unknown Mask"),
+            ("1", "Empty 1"),
+            ("2", "Empty 2"),
+            ("3", "Empty 3"),
+            ("4", "Empty 4"),
+            ("5", "Empty 5"),
+            ("9", "Unknown"),
         ],
     )
     def test_get_mask(self, cbp, mask_float, expected_name):
-        cbp.set_mask(expected_name)
+        cbp.set_mask(mask_float)
         cbp.get_mask()
         assert cbp.mask == expected_name
 
     @pytest.mark.parametrize(
         "mask_name,mask_float",
         [
-            ("Not a mask 1", b"new_msk=1.000000"),
-            ("Not a mask 2", b"new_msk=2.000000"),
-            ("Not a mask 3", b"new_msk=3.000000"),
-            ("Not a mask 4", b"new_msk=4.000000"),
-            ("Not a mask 5", b"new_msk=5.000000"),
-            ("Unknown Mask", b"new_msk=9.000000"),
+            ("1", b"new_msk=1.000000"),
+            ("2", b"new_msk=2.000000"),
+            ("3", b"new_msk=3.000000"),
+            ("4", b"new_msk=4.000000"),
+            ("5", b"new_msk=5.000000"),
+            ("9", b"new_msk=9.000000"),
         ],
     )
     def test_set_mask(self, cbp, mask_name, mask_float):
         cbp.set_mask(mask_name)
         assert (
-            "new_msk={0:f}".format(cbp.mask_dictionary[mask_name].id).encode("ascii")
+            "new_msk={0:f}".format(cbp.masks.__dict__.get(mask_name).id).encode("ascii")
             == mask_float
         )
 

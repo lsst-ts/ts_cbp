@@ -35,7 +35,7 @@ setuptools.setup(
     package_dir={"": "python"},
     package_data={"": ["*.rst", "*.yaml"]},
     data_files=[(os.path.join(data_files_path, "schema"), ["schema/CBP.yaml"])],
-    scripts=["bin/RunCBPCSC.py", "bin/RunCBPSimulator.sh"],
+    scripts=["bin/run_cbp.py", "bin/run_cbp_simulator.sh"],
     tests_require=test_reqs,
     license="GPL",
     project_urls={

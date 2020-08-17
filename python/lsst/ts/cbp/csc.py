@@ -275,11 +275,11 @@ class CBPModel:
         self.mask_rotation = self._cbp.mask_rotation
         self.focus = self._cbp.focus
         self.panic_status = self._cbp.panic_status
-        self.azimuth_status = self._cbp.azimuth_status
-        self.altitude_status = self._cbp.altitude_status
-        self.mask_status = self._cbp.mask_select_status
-        self.mask_rotation_status = self._cbp.mask_rotate_status
-        self.focus_status = self._cbp.focus_status
+        self.azimuth_status = self._cbp.encoder_status.AZIMUTH
+        self.altitude_status = self._cbp.encoder_status.ELEVATION
+        self.mask_status = self._cbp.encoder_status.MASK_SELECT
+        self.mask_rotation_status = self._cbp.encoder_status.MASK_ROTATE
+        self.focus_status = self._cbp.encoder_status.FOCUS
         self.auto_parked = self._cbp.auto_park
         self.parked = self._cbp.park
 
