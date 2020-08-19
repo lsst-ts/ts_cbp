@@ -5,6 +5,9 @@ from lewis.core.statemachine import State
 
 
 class SimulatedCBP(StateMachineDevice):
+    """Implements state machine for CBP simulator
+    """
+
     def _initialize_data(self):
         self.altitude = 0
         self.target_altitude = 0

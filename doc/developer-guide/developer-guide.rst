@@ -66,6 +66,12 @@ Stopping the CSC.
 Simulator
 =========
 
+The simulator is written using `lewis <https://lewis.readthedocs.io/en/latest/index.html>`_.
+The code for the simulator is located in the ``simulator`` folder of the ``cbp`` package.
+It is divided into two areas ``devices`` and ``interfaces``.
+The ``device`` and ``state`` module contain the logic for the state machine as ``lewis`` is a cycle and state based framework.
+The ``cbp_stream`` module provides the tcp/ip commands interface for the simulator.
+
 .. prompt:: bash
 
     pip install -U scanf

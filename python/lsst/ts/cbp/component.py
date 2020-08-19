@@ -114,10 +114,7 @@ class CBPComponent:
             The reply that was parsed.
 
         """
-        if self.simulation_mode == 0:
-            parsed_reply = self.socket.recv(128).decode("ascii").split("\r")[0]
-        elif self.simulation_mode == 1:
-            parsed_reply = "0"
+        parsed_reply = self.socket.recv(128).decode("ascii").split("\r")[0]
         return parsed_reply
 
     def send_command(self, msg):
@@ -144,9 +141,7 @@ class CBPComponent:
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.settimeout(10)
         self.socket.connect((self._address, self._port))
-        self.log.debug(
-            "CBP connected to {0} on port {1}".format(self._address, self._port)
-        )
+        self.log.debug(f"CBP connected to {self._address} on port {self._port}")
 
     def disconnect(self):
         """Disconnects from the tcp socket.
@@ -180,7 +175,7 @@ class CBPComponent:
         if position < -45 or position > 45:
             raise ValueError("New azimuth value exceeds Azimuth limit.")
         else:
-            self.send_command("new_az={0:f}".format(position))
+            self.send_command(f"new_az={position}")
             reply = self.socket.recv(128).decode("ascii", "ignore")
             self.log.debug(reply)
 
@@ -212,7 +207,7 @@ class CBPComponent:
         if position < -69 or position > 45:
             raise ValueError("New altitude value exceeds altitude limit.")
         else:
-            self.send_command("new_alt={0:f}".format(position))
+            self.send_command(f"new_alt={position}")
             reply = self.socket.recv(128).decode("ascii", "ignore")
             self.log.debug(reply)
 
@@ -243,7 +238,7 @@ class CBPComponent:
         if position < 0 or position > 13000:
             raise ValueError("New focus value exceeds focus limit.")
         else:
-            self.send_command("new_foc={0:f}".format(position))
+            self.send_command(f"new_foc={position}")
             reply = self.socket.recv(128).decode("ascii", "ignore")
             self.log.debug(reply)
 
@@ -272,7 +267,7 @@ class CBPComponent:
         None
 
         """
-        self.send_command("new_msk={0:f}".format(self.masks.__dict__.get(mask).id))
+        self.send_command(f"new_msk={self.masks.__dict__.get(mask).id}")
         reply = self.socket.recv(128).decode("ascii", "ignore")
         self.log.debug(reply)
 
@@ -302,7 +297,7 @@ class CBPComponent:
         """
         if mask_rotation < 0 or mask_rotation > 360:
             raise ValueError("New mask rotation value exceeds mask rotation limits.")
-        self.send_command("new_rot={0:f}".format(mask_rotation))
+        self.send_command(f"new_rot={mask_rotation}")
         reply = self.socket.recv(128).decode("ascii", "ignore")
         self.log.debug(reply)
 

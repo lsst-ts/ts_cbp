@@ -2,6 +2,9 @@ from lewis.adapters.stream import StreamInterface, Cmd, scanf
 
 
 class CBPStreamInterface(StreamInterface):
+    """ Provides tcp/ip interface for CBP Simulator.
+    """
+
     commands = {
         Cmd("get_azimuth", r"^az=\?$"),
         Cmd("set_azimuth", scanf("new_az=%f"), argument_mappings=(float,)),
@@ -28,9 +31,13 @@ class CBPStreamInterface(StreamInterface):
     out_terminator = "\r"
 
     def get_azimuth(self):
+        """Returns azimuth.
+        """
         return self.device.azimuth
 
     def set_azimuth(self, new_azimuth):
+        """Sets the target azimuth.
+        """
         self.device.target_azimuth = new_azimuth
         return ""
 
