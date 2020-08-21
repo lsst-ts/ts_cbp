@@ -21,20 +21,21 @@ EUPs method
 
     pip install .[dev]
     setup -kr .
-    scons 
+    scons
 
 Requirements
 ------------
 This project uses the ``black`` linter.
 
+Run the following once in the repository
+
 .. code::
 
-    pip install .[dev]
-    pre-commit install
+    git config core.hooksPath .githooks
 
 ``black`` will now run as a pre-commit git hook.
 
-There is a GitHub action for running the ``black --check`` function that will catch any missing ``black`` linted files.
+There is a tests/test_black that checks if any files have not been linted by ``black``.
 
 Usage
 =====
