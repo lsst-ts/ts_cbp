@@ -17,8 +17,10 @@ class Status(enum.Flag):
 class CBPComponent:
     """This class is for implementing the CBP component.
 
-    The component implements a python wrapper over :term:`DMC` code written by DFM Manufacturing.
-    The following api exposes commands that move the motors of the CBP, sets the focus and selects the mask.
+    The component implements a python wrapper over :term:`DMC` code written by
+    DFM Manufacturing.
+    The following api exposes commands that move the motors of the CBP, sets
+    the focus and selects the mask.
 
     Attributes
     ----------
@@ -41,29 +43,30 @@ class CBPComponent:
         The current value of the mask rotation encoder in degrees.
 
     masks : `SimpleNamespace`
-        A simplenamespace that contains the mask names and rotation values and id.
+        A simplenamespace that contains the mask names and rotation values and
+        id.
 
     focus : `float`
         The current value of the focus encoder in microns.
 
     panic_status : `float`
         The current value of the panic variable in the CBP dmc code.
-        A non-zero value represents a panic state and causes the motors to cease functioning until panic is
-        dealt with or goes away.
+        A non-zero value represents a panic state and causes the motors to
+        cease functioning until panic is dealt with or goes away.
         This status is set by the values of the other statuses.
 
     auto_park : `float`
         The current value of the auto_park variable.
-        If this value is one, that means that CBP suffered a power loss that lasted more than 12 seconds and
-        was on battery back up.
-        The CBP will then park itself automatically, moving azimuth to 0 and altitude to -70 and lock focus
-        and mask.
-        To unpark CBP, the park variable should be set to zero.
+        If this value is one, that means that CBP suffered a power loss that
+        lasted more than 12 seconds and was on battery back up.
+        The CBP will then park itself automatically, moving azimuth to 0 and
+        altitude to -70 and lock focus and mask.
+        To un-park CBP, the park variable should be set to zero.
 
     park : `float`
         The current value of the park variable.
-        This value can be set to one or zero, if set to one it will park the CBP if set to zero it will
-        unpark.
+        This value can be set to one or zero, if set to one it will park the
+        CBP if set to zero it will un-park.
 
     encoder_status : `Status`
         A flag enum that contains the status information for each encoder.
@@ -71,8 +74,8 @@ class CBPComponent:
     Notes
     -----
 
-    The class uses the python socket module to build TCP/IP connections to the galil controller mounted onto
-    CBP.
+    The class uses the python socket module to build TCP/IP connections to the
+    galil controller mounted onto CBP.
     The underlying api is built on :term:`DMC`.
     """
 
@@ -129,7 +132,8 @@ class CBPComponent:
         self.socket.sendall(msg.encode())
 
     def connect(self):
-        """Creates a socket and connects to the CBP's static address and designated port.
+        """Creates a socket and connects to the CBP's static address and
+        designated port.
 
 
         Returns
@@ -165,7 +169,8 @@ class CBPComponent:
         Parameters
         ----------
         position: float
-            This is the value in degrees that is sent to the CBP in order to move the horizontal axis.
+            This is the value in degrees that is sent to the CBP in order to
+            move the horizontal axis.
 
         Returns
         -------
@@ -243,7 +248,8 @@ class CBPComponent:
             self.log.debug(reply)
 
     def get_mask(self):
-        """This gets the current mask value from the encoder which is converted into the name of the mask.
+        """This gets the current mask value from the encoder which is converted
+        into the name of the mask.
 
         Returns
         -------
@@ -260,7 +266,8 @@ class CBPComponent:
         Parameters
         ----------
         mask: str
-            This is the name of the mask which is converted to an int using a dictionary.
+            This is the name of the mask which is converted to an int using a
+            dictionary.
 
         Returns
         -------
@@ -272,7 +279,8 @@ class CBPComponent:
         self.log.debug(reply)
 
     def get_mask_rotation(self):
-        """This gets the mask rotation value from the encoder which is in degrees.
+        """This gets the mask rotation value from the encoder which is in
+        degrees.
 
         Returns
         -------
@@ -335,7 +343,8 @@ class CBPComponent:
         self.park = bool(self.parse_reply())
 
     def set_park(self, park: int = 0):
-        """A function that tells the CBP to park or unpark depending on the value given.
+        """A function that tells the CBP to park or un-park depending on the
+        value given.
 
         Parameters
         ----------

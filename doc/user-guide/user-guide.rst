@@ -78,7 +78,7 @@ Getting telemetry from the CBP
 .. code::
 
     azimuth = await cbp.tel_azimuth.aget(timeout=2)
-    altiude = await cbp.tel_altitude.aget(timeout=2)
+    altitude = await cbp.tel_altitude.aget(timeout=2)
 
 Clean up
 

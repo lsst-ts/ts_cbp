@@ -194,7 +194,8 @@ class CBPCSC(salobj.ConfigurableCsc):
         self.assert_enabled("clearFault")
 
     async def begin_enable(self, data):
-        """Overrides the begin_enable function in salobj.BaseCsc to make sure the CBP is unparked.
+        """Overrides the begin_enable function in salobj.BaseCsc to make sure
+        the CBP is un-parked.
 
         Parameters
         ----------
