@@ -70,7 +70,6 @@ pipeline {
                         export TS_CONFIG_MTCALSYS_DIR=/home/saluser/repos/ts_config_mtcalsys
                         cd $HOME
                         pip install .[dev]
-                        pip install -U scanf
                         pytest --cov-report html --cov=${env.MODULE_NAME} --junitxml=${env.XML_REPORT}
                     """
                 }

@@ -1,7 +1,7 @@
 __all__ = ["CBPComponent"]
 
 import logging
-import socket
+import asyncio
 import types
 import enum
 
@@ -81,15 +81,20 @@ class CBPComponent:
 
     def __init__(self):
         self.log = logging.getLogger(__name__)
-        self.socket = None
+        self.reader = None
+        self.writer = None
+        self.lock = asyncio.Lock()
+        self.timeout = 5
+        self.long_timeout = 30
+
         self.altitude = None
         self.azimuth = None
         self.mask = None
         self.mask_rotation = None
 
         self.focus = None
-        self._address = None
-        self._port = None
+        self.host = None
+        self.port = None
         self.panic_status = None
         self.auto_park = None
         self.park = None
@@ -108,7 +113,7 @@ class CBPComponent:
         mask_dict["9"].name = "Unknown"
         self.masks = types.SimpleNamespace(**mask_dict)
 
-    def parse_reply(self):
+    async def parse_reply(self):
         """Parses the reply to remove the carriage return and new line.
 
         Returns
@@ -117,10 +122,13 @@ class CBPComponent:
             The reply that was parsed.
 
         """
-        parsed_reply = self.socket.recv(128).decode("ascii").split("\r")[0]
-        return parsed_reply
+        async with self.lock:
+            reply = await self.reader.readuntil(b"\r")
+            reply = reply.decode("ascii").strip("\r")
+            reply = reply[0]
+            return reply
 
-    def send_command(self, msg):
+    async def send_command(self, msg):
         """Sends the encoded command.
 
         Parameters
@@ -128,10 +136,17 @@ class CBPComponent:
         msg : `str`
             The string command to be sent.
         """
+        async with self.lock:
+            msg = msg + "\r"
+            self.log.info(f"Writing: {msg}")
+            self.writer.write(msg.encode("ascii"))
+            await self.writer.drain()
+
         msg = msg + "\r"
+        self.log.info("Sending command")
         self.socket.sendall(msg.encode())
 
-    def connect(self):
+    async def connect(self):
         """Creates a socket and connects to the CBP's static address and
         designated port.
 
@@ -142,18 +157,26 @@ class CBPComponent:
             Nothing
 
         """
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.settimeout(10)
-        self.socket.connect((self._address, self._port))
-        self.log.debug(f"CBP connected to {self._address} on port {self._port}")
+        async with self.lock:
+            connect_task = asyncio.open_connection(host=self.host, port=self.port)
+            self.reader, self.writer = await asyncio.wait_for(
+                connect_task, timeout=self.long_timeout
+            )
 
-    def disconnect(self):
+    async def disconnect(self):
         """Disconnects from the tcp socket.
         """
-        self.socket.close()
-        self.socket = None
+        async with self.lock:
+            self.reader = None
+            if self.writer is not None:
+                try:
+                    self.writer.write_eof()
+                    await asyncio.wait_for(self.writer.drain(), timeout=self.timeout)
+                finally:
+                    self.writer.close()
+                    self.writer = None
 
-    def get_azimuth(self):
+    async def get_azimuth(self):
         """Gets azimuth value from azimuth encoder which is in degrees.
 
         Returns
@@ -161,9 +184,9 @@ class CBPComponent:
         None
         """
         self.send_command("az=?")
-        self.azimuth = float(self.parse_reply())
+        self.azimuth = float(await self.parse_reply())
 
-    def move_azimuth(self, position: float):
+    async def move_azimuth(self, position: float):
         """This moves the horizontal axis to the value sent by the user.
 
         Parameters
@@ -181,10 +204,9 @@ class CBPComponent:
             raise ValueError("New azimuth value exceeds Azimuth limit.")
         else:
             self.send_command(f"new_az={position}")
-            reply = self.socket.recv(128).decode("ascii", "ignore")
-            self.log.debug(reply)
+            await self.parse_reply()
 
-    def get_altitude(self):
+    async def get_altitude(self):
         """This gets the altitude value from the altitude encoder in degrees.
 
         Returns
@@ -194,9 +216,9 @@ class CBPComponent:
         """
         self.log.debug("get_altitude sent")
         self.send_command("alt=?")
-        self.altitude = float(self.parse_reply())
+        self.altitude = float(await self.parse_reply())
 
-    def move_altitude(self, position: float):
+    async def move_altitude(self, position: float):
         """This moves the vertical axis to the value that the user sent.
 
         Parameters
@@ -213,10 +235,9 @@ class CBPComponent:
             raise ValueError("New altitude value exceeds altitude limit.")
         else:
             self.send_command(f"new_alt={position}")
-            reply = self.socket.recv(128).decode("ascii", "ignore")
-            self.log.debug(reply)
+            await self.parse_reply()
 
-    def get_focus(self):
+    async def get_focus(self):
         """This gets the value of the focus encoder. Units: microns
 
         Returns
@@ -225,9 +246,9 @@ class CBPComponent:
 
         """
         self.send_command("foc=?")
-        self.focus = int(self.parse_reply())
+        self.focus = int(await self.parse_reply())
 
-    def change_focus(self, position: int):
+    async def change_focus(self, position: int):
         """This changes the focus to whatever value the user sent.
 
         Parameters
@@ -244,10 +265,9 @@ class CBPComponent:
             raise ValueError("New focus value exceeds focus limit.")
         else:
             self.send_command(f"new_foc={position}")
-            reply = self.socket.recv(128).decode("ascii", "ignore")
-            self.log.debug(reply)
+            await self.parse_reply()
 
-    def get_mask(self):
+    async def get_mask(self):
         """This gets the current mask value from the encoder which is converted
         into the name of the mask.
 
@@ -257,10 +277,10 @@ class CBPComponent:
 
         """
         self.send_command("msk=?")
-        mask = str(int(float(self.parse_reply())))
+        mask = str(int(float(await self.parse_reply())))
         self.mask = self.masks.__dict__.get(mask).name
 
-    def set_mask(self, mask: str):
+    async def set_mask(self, mask: str):
         """This sets the mask value
 
         Parameters
@@ -275,10 +295,9 @@ class CBPComponent:
 
         """
         self.send_command(f"new_msk={self.masks.__dict__.get(mask).id}")
-        reply = self.socket.recv(128).decode("ascii", "ignore")
-        self.log.debug(reply)
+        await self.parse_reply()
 
-    def get_mask_rotation(self):
+    async def get_mask_rotation(self):
         """This gets the mask rotation value from the encoder which is in
         degrees.
 
@@ -288,9 +307,9 @@ class CBPComponent:
 
         """
         self.send_command("rot=?")
-        self.mask_rotation = float(self.parse_reply())
+        self.mask_rotation = float(await self.parse_reply())
 
-    def set_mask_rotation(self, mask_rotation: float):
+    async def set_mask_rotation(self, mask_rotation: float):
         """This sets the mask rotation
 
         Parameters
@@ -306,10 +325,9 @@ class CBPComponent:
         if mask_rotation < 0 or mask_rotation > 360:
             raise ValueError("New mask rotation value exceeds mask rotation limits.")
         self.send_command(f"new_rot={mask_rotation}")
-        reply = self.socket.recv(128).decode("ascii", "ignore")
-        self.log.debug(reply)
+        await self.parse_reply()
 
-    def check_panic_status(self):
+    async def check_panic_status(self):
         """Gets the panic variable from CBP
 
         Returns
@@ -318,9 +336,9 @@ class CBPComponent:
 
         """
         self.send_command("wdpanic=?")
-        self.panic_status = bool(self.parse_reply())
+        self.panic_status = bool(await self.parse_reply())
 
-    def check_auto_park(self):
+    async def check_auto_park(self):
         """Gets the autopark variable from CBP
 
         Returns
@@ -329,9 +347,9 @@ class CBPComponent:
 
         """
         self.send_command("autopark=?")
-        self.auto_park = bool(self.parse_reply())
+        self.auto_park = bool(await self.parse_reply())
 
-    def check_park(self):
+    async def check_park(self):
         """Gets the park variable from CBP
 
         Returns
@@ -340,9 +358,9 @@ class CBPComponent:
 
         """
         self.send_command("park=?")
-        self.park = bool(self.parse_reply())
+        self.park = bool(await self.parse_reply())
 
-    def set_park(self, park: int = 0):
+    async def set_park(self, park: int = 0):
         """A function that tells the CBP to park or un-park depending on the
         value given.
 
@@ -359,9 +377,9 @@ class CBPComponent:
         park = bool(park)
         self.send_command(f"park={int(park)}")
         reply = self.socket.recv(128).decode("ascii", "ignore")
-        self.log.debug(reply)
+        self.log.debug(await reply)
 
-    def check_cbp_status(self):
+    async def check_cbp_status(self):
         """Checks the status of the encoders.
 
         Returns
@@ -370,17 +388,17 @@ class CBPComponent:
 
         """
         self.send_command("AAstat=?")
-        self.encoder_status.AZIMUTH = bool(self.parse_reply())
+        self.encoder_status.AZIMUTH = bool(await self.parse_reply())
         self.send_command("ABstat=?")
-        self.encoder_status.ELEVATION = bool(self.parse_reply())
+        self.encoder_status.ELEVATION = bool(await self.parse_reply())
         self.send_command("ACstat=?")
-        self.encoder_status.MASK_SELECT = bool(self.parse_reply())
+        self.encoder_status.MASK_SELECT = bool(await self.parse_reply())
         self.send_command("ADstat=?")
-        self.encoder_status.MASK_ROTATE = bool(self.parse_reply())
+        self.encoder_status.MASK_ROTATE = bool(await self.parse_reply())
         self.send_command("AEstat=?")
-        self.encoder_status.FOCUS = bool(self.parse_reply())
+        self.encoder_status.FOCUS = bool(await self.parse_reply())
 
-    def get_cbp_telemetry(self):
+    async def get_cbp_telemetry(self):
         """Gets the position data of the CBP.
 
         Returns
@@ -388,16 +406,16 @@ class CBPComponent:
         None
 
         """
-        self.get_altitude()
-        self.get_azimuth()
-        self.get_focus()
-        self.get_mask()
-        self.get_mask_rotation()
+        await self.get_altitude()
+        await self.get_azimuth()
+        await self.get_focus()
+        await self.get_mask()
+        await self.get_mask_rotation()
 
     def configure(self, config):
         self.config = config
-        self._address = self.config.address
-        self._port = self.config.port
+        self.host = self.config.address
+        self.port = self.config.port
         self.masks.mask1.name = self.config.mask1.name
         self.masks.mask1.rotation = self.config.mask1.rotation
         self.masks.mask2.name = self.config.mask2.name
@@ -409,7 +427,7 @@ class CBPComponent:
         self.masks.mask5.name = self.config.mask5.name
         self.masks.mask5.rotation = self.config.mask5.rotation
 
-    def publish(self):
+    async def publish(self):
         """This updates the attributes within the component.
 
         Returns
@@ -417,11 +435,11 @@ class CBPComponent:
         None
 
         """
-        self.check_panic_status()
-        self.check_cbp_status()
-        self.check_park()
-        self.check_auto_park()
-        self.get_cbp_telemetry()
+        await self.check_panic_status()
+        await self.check_cbp_status()
+        await self.check_park()
+        await self.check_auto_park()
+        await self.get_cbp_telemetry()
 
     def set_simulation_mode(self, simulation_mode):
         self.simulation_mode = simulation_mode

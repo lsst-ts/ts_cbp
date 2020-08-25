@@ -134,7 +134,7 @@ class CBPCSC(salobj.ConfigurableCsc):
 
         """
         self.assert_enabled("moveAltitude")
-        self.model.move_altitude(data.altitude)
+        await self.model.move_altitude(data.altitude)
         self.cmd_moveAltitude.ack_in_progress(data, "In progress")
         await asyncio.sleep(self.cbp_speed * self.factor)
 
@@ -151,7 +151,7 @@ class CBPCSC(salobj.ConfigurableCsc):
 
         """
         self.assert_enabled("setFocus")
-        self.model.change_focus(data.focus)
+        await self.model.change_focus(data.focus)
 
     async def do_park(self, data):
         """Parks the CBP.
@@ -162,7 +162,7 @@ class CBPCSC(salobj.ConfigurableCsc):
 
         """
         self.assert_enabled("park")
-        self.model.park()
+        await self.model.park()
 
     async def do_changeMask(self, data):
         """Changes the mask.
@@ -177,7 +177,7 @@ class CBPCSC(salobj.ConfigurableCsc):
 
         """
         self.assert_enabled("changeMask")
-        self.model.change_mask(data.mask)
+        await self.model.change_mask(data.mask)
 
     async def do_clearFault(self, data):
         """
@@ -209,12 +209,12 @@ class CBPCSC(salobj.ConfigurableCsc):
         self.model._cbp.set_park()
 
     async def end_start(self, data):
-        self.model.connect()
+        await self.model.connect()
         self.telemetry_task = asyncio.ensure_future(self.telemetry())
 
     async def end_standby(self, data):
         self.telemetry_task.cancel()
-        self.model.disconnect()
+        await self.model.disconnect()
 
     async def configure(self, config):
         try:
@@ -284,7 +284,7 @@ class CBPModel:
         self.auto_parked = self._cbp.auto_park
         self.parked = self._cbp.park
 
-    def move_azimuth(self, azimuth: float):
+    async def move_azimuth(self, azimuth: float):
         """Calls the move_azimuth function of the component.
 
         Parameters
@@ -297,9 +297,9 @@ class CBPModel:
         None
 
         """
-        self._cbp.move_azimuth(azimuth)
+        await self._cbp.move_azimuth(azimuth)
 
-    def move_altitude(self, altitude: float):
+    async def move_altitude(self, altitude: float):
         """Calls the move_altitude function of the component.
 
         Parameters
@@ -312,9 +312,9 @@ class CBPModel:
         None
 
         """
-        self._cbp.move_altitude(altitude)
+        await self._cbp.move_altitude(altitude)
 
-    def change_mask(self, mask: str):
+    async def change_mask(self, mask: str):
         """Calls the change_mask function of the component.
 
         Parameters
@@ -328,10 +328,10 @@ class CBPModel:
 
         """
         mask_rotation = self._cbp.mask_dictionary[mask].rotation
-        self._cbp.set_mask(mask)
-        self._cbp.set_mask_rotation(mask_rotation)
+        await self._cbp.set_mask(mask)
+        await self._cbp.set_mask_rotation(mask_rotation)
 
-    def change_focus(self, focus: int):
+    async def change_focus(self, focus: int):
         """Calls the change_focus function of the CBP component,
 
         Parameters
@@ -344,9 +344,9 @@ class CBPModel:
         None
 
         """
-        self._cbp.change_focus(focus)
+        await self._cbp.change_focus(focus)
 
-    def park(self):
+    async def park(self):
         """Calls the park function of the component.
 
         Returns
@@ -354,18 +354,18 @@ class CBPModel:
         None
 
         """
-        self._cbp.set_park(1)
+        await self._cbp.set_park(1)
 
-    def connect(self):
-        self._cbp.connect()
+    async def connect(self):
+        await self._cbp.connect()
 
-    def disconnect(self):
-        self._cbp.disconnect()
+    async def disconnect(self):
+        await self._cbp.disconnect()
 
     def configure(self, config):
         self._cbp.configure(config)
 
-    def publish(self):
+    async def publish(self):
         """Calls the publish function of the component.
 
         Returns
@@ -373,4 +373,4 @@ class CBPModel:
         None
 
         """
-        self._cbp.publish()
+        await self._cbp.publish()
