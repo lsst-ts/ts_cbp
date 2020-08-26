@@ -1,4 +1,4 @@
-__all__ = ["CBPComponent"]
+__all__ = ["CBPComponent", "Status"]
 
 import logging
 import asyncio
@@ -7,6 +7,9 @@ import enum
 
 
 class Status(enum.Flag):
+    """The status for the encoders.
+    """
+
     AZIMUTH = enum.auto()
     ELEVATION = enum.auto()
     MASK_SELECT = enum.auto()
@@ -60,7 +63,7 @@ class CBPComponent:
         If this value is one, that means that CBP suffered a power loss that
         lasted more than 12 seconds and was on battery back up.
         The CBP will then park itself automatically, moving azimuth to 0 and
-        altitude to -70 and lock focus and mask.
+        altitude to -70 and locking focus and mask.
         To un-park CBP, the park variable should be set to zero.
 
     park : `float`
@@ -75,7 +78,7 @@ class CBPComponent:
     -----
 
     The class uses the python socket module to build TCP/IP connections to the
-    galil controller mounted onto CBP.
+    Galil controller for the CBP.
     The underlying api is built on :term:`DMC`.
     """
 
@@ -113,23 +116,8 @@ class CBPComponent:
         mask_dict["9"].name = "Unknown"
         self.masks = types.SimpleNamespace(**mask_dict)
 
-    async def parse_reply(self):
-        """Parses the reply to remove the carriage return and new line.
-
-        Returns
-        -------
-        str
-            The reply that was parsed.
-
-        """
-        async with self.lock:
-            reply = await self.reader.readuntil(b"\r")
-            reply = reply.decode("ascii").strip("\r")
-            reply = reply[0]
-            return reply
-
     async def send_command(self, msg):
-        """Sends the encoded command.
+        """Sends the encoded command and reads the reply.
 
         Parameters
         ----------
@@ -141,10 +129,10 @@ class CBPComponent:
             self.log.info(f"Writing: {msg}")
             self.writer.write(msg.encode("ascii"))
             await self.writer.drain()
-
-        msg = msg + "\r"
-        self.log.info("Sending command")
-        self.socket.sendall(msg.encode())
+            reply = await self.reader.readuntil(b"\r")
+            reply = reply.decode("ascii").strip("\r")
+            reply = reply[0]
+            return reply
 
     async def connect(self):
         """Creates a socket and connects to the CBP's static address and
@@ -183,8 +171,7 @@ class CBPComponent:
         -------
         None
         """
-        self.send_command("az=?")
-        self.azimuth = float(await self.parse_reply())
+        self.azimuth = float(await self.send_command("az=?"))
 
     async def move_azimuth(self, position: float):
         """This moves the horizontal axis to the value sent by the user.
@@ -203,8 +190,7 @@ class CBPComponent:
         if position < -45 or position > 45:
             raise ValueError("New azimuth value exceeds Azimuth limit.")
         else:
-            self.send_command(f"new_az={position}")
-            await self.parse_reply()
+            await self.send_command(f"new_az={position}")
 
     async def get_altitude(self):
         """This gets the altitude value from the altitude encoder in degrees.
@@ -215,8 +201,7 @@ class CBPComponent:
 
         """
         self.log.debug("get_altitude sent")
-        self.send_command("alt=?")
-        self.altitude = float(await self.parse_reply())
+        self.altitude = float(await self.send_command("alt=?"))
 
     async def move_altitude(self, position: float):
         """This moves the vertical axis to the value that the user sent.
@@ -234,8 +219,7 @@ class CBPComponent:
         if position < -69 or position > 45:
             raise ValueError("New altitude value exceeds altitude limit.")
         else:
-            self.send_command(f"new_alt={position}")
-            await self.parse_reply()
+            await self.send_command(f"new_alt={position}")
 
     async def get_focus(self):
         """This gets the value of the focus encoder. Units: microns
@@ -245,8 +229,7 @@ class CBPComponent:
         None
 
         """
-        self.send_command("foc=?")
-        self.focus = int(await self.parse_reply())
+        self.focus = int(await self.send_command("foc=?"))
 
     async def change_focus(self, position: int):
         """This changes the focus to whatever value the user sent.
@@ -264,8 +247,7 @@ class CBPComponent:
         if position < 0 or position > 13000:
             raise ValueError("New focus value exceeds focus limit.")
         else:
-            self.send_command(f"new_foc={position}")
-            await self.parse_reply()
+            await self.send_command(f"new_foc={position}")
 
     async def get_mask(self):
         """This gets the current mask value from the encoder which is converted
@@ -276,8 +258,7 @@ class CBPComponent:
         None
 
         """
-        self.send_command("msk=?")
-        mask = str(int(float(await self.parse_reply())))
+        mask = str(int(float(await self.send_command("msk=?"))))
         self.mask = self.masks.__dict__.get(mask).name
 
     async def set_mask(self, mask: str):
@@ -294,8 +275,7 @@ class CBPComponent:
         None
 
         """
-        self.send_command(f"new_msk={self.masks.__dict__.get(mask).id}")
-        await self.parse_reply()
+        await self.send_command(f"new_msk={self.masks.__dict__.get(mask).id}")
 
     async def get_mask_rotation(self):
         """This gets the mask rotation value from the encoder which is in
@@ -306,8 +286,7 @@ class CBPComponent:
         None
 
         """
-        self.send_command("rot=?")
-        self.mask_rotation = float(await self.parse_reply())
+        self.mask_rotation = float(await self.send_command("rot=?"))
 
     async def set_mask_rotation(self, mask_rotation: float):
         """This sets the mask rotation
@@ -324,8 +303,7 @@ class CBPComponent:
         """
         if mask_rotation < 0 or mask_rotation > 360:
             raise ValueError("New mask rotation value exceeds mask rotation limits.")
-        self.send_command(f"new_rot={mask_rotation}")
-        await self.parse_reply()
+        await self.send_command(f"new_rot={mask_rotation}")
 
     async def check_panic_status(self):
         """Gets the panic variable from CBP
@@ -335,8 +313,7 @@ class CBPComponent:
         None
 
         """
-        self.send_command("wdpanic=?")
-        self.panic_status = bool(await self.parse_reply())
+        self.panic_status = bool(await self.send_command("wdpanic=?"))
 
     async def check_auto_park(self):
         """Gets the autopark variable from CBP
@@ -346,8 +323,7 @@ class CBPComponent:
         None
 
         """
-        self.send_command("autopark=?")
-        self.auto_park = bool(await self.parse_reply())
+        self.auto_park = bool(await self.send_command("autopark=?"))
 
     async def check_park(self):
         """Gets the park variable from CBP
@@ -357,8 +333,7 @@ class CBPComponent:
         None
 
         """
-        self.send_command("park=?")
-        self.park = bool(await self.parse_reply())
+        self.park = bool(await self.send_command("park=?"))
 
     async def set_park(self, park: int = 0):
         """A function that tells the CBP to park or un-park depending on the
@@ -375,9 +350,7 @@ class CBPComponent:
 
         """
         park = bool(park)
-        self.send_command(f"park={int(park)}")
-        reply = self.socket.recv(128).decode("ascii", "ignore")
-        self.log.debug(await reply)
+        await self.send_command(f"park={int(park)}")
 
     async def check_cbp_status(self):
         """Checks the status of the encoders.
@@ -387,16 +360,11 @@ class CBPComponent:
         None
 
         """
-        self.send_command("AAstat=?")
-        self.encoder_status.AZIMUTH = bool(await self.parse_reply())
-        self.send_command("ABstat=?")
-        self.encoder_status.ELEVATION = bool(await self.parse_reply())
-        self.send_command("ACstat=?")
-        self.encoder_status.MASK_SELECT = bool(await self.parse_reply())
-        self.send_command("ADstat=?")
-        self.encoder_status.MASK_ROTATE = bool(await self.parse_reply())
-        self.send_command("AEstat=?")
-        self.encoder_status.FOCUS = bool(await self.parse_reply())
+        self.encoder_status.AZIMUTH = bool(await self.send_command("AAstat=?"))
+        self.encoder_status.ELEVATION = bool(await self.send_command("ABstat=?"))
+        self.encoder_status.MASK_SELECT = bool(await self.send_command("ACstat=?"))
+        self.encoder_status.MASK_ROTATE = bool(await self.send_command("ADstat=?"))
+        self.encoder_status.FOCUS = bool(await self.send_command("AEstat=?"))
 
     async def get_cbp_telemetry(self):
         """Gets the position data of the CBP.

@@ -1,5 +1,3 @@
-.. _User_Guide:
-
 ##############
 CBP User Guide
 ##############
@@ -10,6 +8,8 @@ Limits are in place for each axis to prevent damage to the device.
 The CBP also has the ability to be parked, where the altitude is at -70 degrees and the motors cannot be moved.
 This ability can be manually commanded, but is automatically triggered if an internal battery source detects that the power has been lost for more than ~3 seconds.
 
+
+.. _user-guide:user-guide:cbp-interface:
 
 CBP Interface
 ======================
@@ -33,6 +33,8 @@ The relevant telemetry includes
 :ref:`ts_xml:CBP:Telemetry:mask`
 
 :ref:`ts_xml:CBP:Telemetry:status`
+
+.. _user-guide:user-guide:example-use-case:
 
 Example Use-Case
 ================

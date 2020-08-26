@@ -5,20 +5,6 @@ from lsst.ts import salobj, cbp
 STD_TIMEOUT = 15
 
 
-class Harness:
-    def __init__(self, initial_state):
-        salobj.test_utils.set_random_lsst_dds_domain()
-        self.csc = cbp.csc.CBPCSC(initial_state=initial_state)
-        self.remote = salobj.Remote(domain=self.csc.domain, name="CBP")
-
-    async def __aenter__(self):
-        await self.csc.start_task
-        return self
-
-    async def __aexit__(self, *args):
-        await self.csc.close()
-
-
 class CscTestCase(asynctest.TestCase, salobj.BaseCscTestCase):
     async def setUp(self):
         self.server = cbp.MockServer()

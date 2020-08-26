@@ -32,7 +32,6 @@ Run the following once in the repository
 .. code::
 
     git config core.hooksPath .githooks
-    chmod +x .githooks/pre-commit
 
 ``black`` will now run as a pre-commit git hook.
 

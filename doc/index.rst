@@ -11,7 +11,7 @@ CBP
 .. image:: https://img.shields.io/badge/Jenkins-gray.svg
     :target: https://tssw-ci.lsst.org/job/LSST_Telescope-and-Site/job/ts_CBP/
 
-.. _Overview:
+.. _index:overview:
 
 Overview
 ========
@@ -27,7 +27,7 @@ The CBP will be used as part of the Calibration system of the Main Telescope.
 .. note:: If you are interested in viewing other branches of this repository append a ``/v`` to the end of the url link. For example https://ts-cbp.lsst.io/v/
 
 
-.. _User_Documentation:
+.. _index:user-documentation:
 
 User Documentation
 ==================
@@ -38,7 +38,7 @@ User-level documentation, found at the link below, is aimed at personnel looking
     user-guide/user-guide
     :maxdepth: 2
 
-.. _Configuration:
+.. _index:configuration:
 
 Configuring the CBP
 ===================
@@ -50,7 +50,7 @@ The configuration for the CBP is described at the following link.
     :maxdepth: 1
 
 
-.. _Development_Documentation:
+.. _index:development-documentation:
 
 Development Documentation
 =========================
@@ -61,7 +61,7 @@ This area of documentation focuses on the classes used, API's, and how to partic
     developer-guide/developer-guide
     :maxdepth: 1
 
-.. _Version_History:
+.. _index:version-history:
 
 Version History
 ===============

@@ -21,12 +21,12 @@ class MockServer:
         self.auto_park = False
         self.masks = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
         self.command_calls = {
-            "az": self.format_azimuth,
-            "alt": self.format_altitude,
-            "foc": self.format_focus,
-            "msk": self.format_mask,
-            "rot": self.format_rotation,
-            "wdpanic": self.format_panic,
+            "az": self.do_azimuth,
+            "alt": self.do_altitude,
+            "foc": self.do_focus,
+            "msk": self.do_mask,
+            "rot": self.do_rotation,
+            "wdpanic": self.do_panic,
             "autopark": None,
             "park": None,
             "AAstat": None,
@@ -79,41 +79,41 @@ class MockServer:
                     else:
                         raise Exception("Command is not implemented")
 
-    async def format_azimuth(self, azimuth=None):
+    async def do_azimuth(self, azimuth=None):
         if azimuth is None:
             return f"{self.azimuth}"
         else:
             self.azimuth = azimuth
 
-    async def format_altitude(self, altitude):
+    async def do_altitude(self, altitude):
         if altitude is None:
             return f"{self.altitude}"
         else:
             self.altitude = altitude
 
-    async def format_focus(self, focus):
+    async def do_focus(self, focus):
         if focus is None:
             return f"{self.focus}"
         else:
             self.focus = focus
 
-    async def format_mask(self, mask):
+    async def do_mask(self, mask):
         if mask is None:
             return f"{self.mask}"
         else:
             self.mask = mask
 
-    async def format_rotation(self, rotation):
+    async def do_rotation(self, rotation):
         if rotation is None:
             return f"{self.masks[self.mask]}"
         else:
             self.masks[self.mask] = rotation
 
-    async def format_park(self, park):
+    async def do_park(self, park):
         if park is None:
             return f"{int(self.park)}"
         else:
             self.park = bool(park)
 
-    async def format_panic(self):
+    async def do_panic(self):
         return f"{int(self.panic_status)}"
