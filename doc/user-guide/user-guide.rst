@@ -1,0 +1,89 @@
+##############
+CBP User Guide
+##############
+
+The CBP has two directions for axial movement, the azimuth (side-to-side) and altitude (bottom-to-top).
+It also allows for up to five masks to be added as a means of characterizing beam projection.
+Limits are in place for each axis to prevent damage to the device.
+The CBP also has the ability to be parked, where the altitude is at -70 degrees and the motors cannot be moved.
+This ability can be manually commanded, but is automatically triggered if an internal battery source detects that the power has been lost for more than ~3 seconds.
+
+
+.. _user-guide:user-guide:cbp-interface:
+
+CBP Interface
+======================
+
+A link to the SAL API can be found at the top of the :doc:`index </index>`.
+
+The main commands that will likely be used are 
+
+:ref:`ts_xml:CBP:Commands:moveAzimuth`
+
+:ref:`ts_xml:CBP:Commands:moveAltitude`
+
+:ref:`ts_xml:CBP:Commands:changeMask`
+
+The relevant telemetry includes
+
+:ref:`ts_xml:CBP:Telemetry:azimuth`
+
+:ref:`ts_xml:CBP:Telemetry:altitude`
+
+:ref:`ts_xml:CBP:Telemetry:mask`
+
+:ref:`ts_xml:CBP:Telemetry:status`
+
+.. _user-guide:user-guide:example-use-case:
+
+Example Use-Case
+================
+
+Starting the CSC
+
+.. code::
+
+    from lsst.ts import salobj
+
+    domain = salobj.Domain()
+
+    cbp = salobj.Remote(name="CBP", domain=domain)
+
+    await cbp.start_task
+
+Un-parking the CSC
+
+.. code::
+
+    await cbp.cmd_park.set_start(park=False, timeout=10)
+
+Moving the CBP in azimuth
+
+.. code::
+
+    await cbp.cmd_moveAzimuth.set_start(azimuth=30, timeout=10)
+
+Moving the CBP in altitude
+
+.. code::
+
+    await cbp.cmd_moveAltitude.set_start(altitude=45, timeout=10)
+
+Changing CBP's mask.
+
+.. code::
+
+    await cbp.cmd_changeMask(mask="1")
+
+Getting telemetry from the CBP
+
+.. code::
+
+    azimuth = await cbp.tel_azimuth.aget(timeout=2)
+    altitude = await cbp.tel_altitude.aget(timeout=2)
+
+Clean up
+
+.. code::
+
+    await domain.close()

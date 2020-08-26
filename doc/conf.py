@@ -1,10 +1,15 @@
+"""Sphinx configuration file for TSSW package"""
+
 from documenteer.sphinxconfig.stackconf import build_package_configs
-from pkg_resources import get_distribution
+import lsst.ts.cbp
+
+
 _g = globals()
-_g.update(build_package_configs(
-    project_name='ts-CBP',
-    version=get_distribution('ts-cbp').version
-    ))
-extensions.append('releases')
-extensions.append('sphinxarg.ext')
-extensions.append('sphinx-jsonschema')
+_g.update(
+    build_package_configs(
+        project_name="ts_CBP", version=lsst.ts.cbp.version.__version__
+    )
+)
+
+intersphinx_mapping["ts_xml"] = ("https://ts-xml.lsst.io", None)
+intersphinx_mapping["ts_salobj"] = ("https://ts-salobj.lsst.io", None)

@@ -1,7 +1,0 @@
--r requirements.txt
-
-pytest >= 3.10.1
-pytest-mock >= 1.10.0
-pytest-cov >= 2.6.0
-pytest-flake8
-documenteer[pipelines]
