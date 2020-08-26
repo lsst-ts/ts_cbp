@@ -258,6 +258,8 @@ class CBPComponent:
         None
 
         """
+        # If mask encoder is off then it will return "9.0" which is unknown
+        # mask
         mask = str(int(float(await self.send_command("msk=?"))))
         self.mask = self.masks.__dict__.get(mask).name
 
