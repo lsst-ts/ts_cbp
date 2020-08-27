@@ -83,7 +83,7 @@ class CBPCSC(salobj.ConfigurableCsc):
         """
         self.log.debug("Begin moveAzimuth")
         self.assert_enabled("moveAzimuth")
-        self.model.move_azimuth(data.azimuth)
+        await self.model.move_azimuth(data.azimuth)
         self.log.debug("moveAzimuth sent to model")
         self.cmd_moveAzimuth.ack_in_progress(data, "In progress")
         await asyncio.sleep(self.cbp_speed * self.factor)
@@ -98,7 +98,7 @@ class CBPCSC(salobj.ConfigurableCsc):
         """
         while True:
             self.log.debug("Begin sending telemetry")
-            self.model.publish()
+            await self.model.publish()
             self.tel_azimuth.set_put(azimuth=self.model.azimuth)
             self.tel_altitude.set_put(altitude=self.model.altitude)
             self.tel_focus.set_put(focus=self.model.focus)
@@ -162,7 +162,7 @@ class CBPCSC(salobj.ConfigurableCsc):
 
         """
         self.assert_enabled("park")
-        await self.model.park()
+        await self.model.park(data.park)
 
     async def do_changeMask(self, data):
         """Changes the mask.
@@ -206,7 +206,7 @@ class CBPCSC(salobj.ConfigurableCsc):
         None
 
         """
-        self.model._cbp.set_park()
+        await self.model._cbp.set_park()
 
     async def end_start(self, data):
         await self.model.connect()
@@ -217,10 +217,7 @@ class CBPCSC(salobj.ConfigurableCsc):
         await self.model.disconnect()
 
     async def configure(self, config):
-        try:
-            self.model.configure(config)
-        except Exception as e:
-            self.log.error(e)
+        self.model.configure(config)
 
     @staticmethod
     def get_config_pkg():
@@ -276,11 +273,11 @@ class CBPModel:
         self.mask_rotation = self._cbp.mask_rotation
         self.focus = self._cbp.focus
         self.panic_status = self._cbp.panic_status
-        self.azimuth_status = self._cbp.encoder_status.AZIMUTH
-        self.altitude_status = self._cbp.encoder_status.ELEVATION
-        self.mask_status = self._cbp.encoder_status.MASK_SELECT
-        self.mask_rotation_status = self._cbp.encoder_status.MASK_ROTATE
-        self.focus_status = self._cbp.encoder_status.FOCUS
+        self.azimuth_status = bool(self._cbp.encoder_status.AZIMUTH)
+        self.altitude_status = bool(self._cbp.encoder_status.ELEVATION)
+        self.mask_status = bool(self._cbp.encoder_status.MASK_SELECT)
+        self.mask_rotation_status = bool(self._cbp.encoder_status.MASK_ROTATE)
+        self.focus_status = bool(self._cbp.encoder_status.FOCUS)
         self.auto_parked = self._cbp.auto_park
         self.parked = self._cbp.park
 
