@@ -340,7 +340,7 @@ class CBPComponent:
         """
         self.park = bool(await self.send_command("park=?"))
 
-    async def set_park(self, park: int = 0):
+    async def set_park(self):
         """A function that tells the CBP to park or un-park depending on the
         value given.
 
@@ -354,8 +354,10 @@ class CBPComponent:
         None
 
         """
-        park = bool(park)
-        await self.send_command(f"park={int(park)}")
+        await self.send_command(f"park=1")
+
+    async def set_unpark(self):
+        await self.send_command("park=0")
 
     async def check_cbp_status(self):
         """Checks the status of the encoders.

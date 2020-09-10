@@ -69,7 +69,7 @@ class CBPCSC(salobj.ConfigurableCsc):
         self.factor = factor
         self.log.info("CBP CSC initialized")
 
-    async def do_moveAzimuth(self, data):
+    async def do_move(self, data):
         """Moves the azimuth axis of the CBP.
 
         Parameters
@@ -81,10 +81,14 @@ class CBPCSC(salobj.ConfigurableCsc):
         None
 
         """
-        self.log.debug("Begin moveAzimuth")
-        self.assert_enabled("moveAzimuth")
-        await self.model.move_azimuth(data.azimuth)
-        self.log.debug("moveAzimuth sent to model")
+        self.log.debug("Begin move")
+        self.assert_enabled("move")
+        await asyncio.join(
+            [
+                self.model.move_altitude(data.altitude),
+                self.model.move_azimuth(data.azimuth),
+            ]
+        )
         self.cmd_moveAzimuth.ack_in_progress(data, "In progress")
         await asyncio.sleep(self.cbp_speed * self.factor)
 
@@ -121,23 +125,6 @@ class CBPCSC(salobj.ConfigurableCsc):
 
             await asyncio.sleep(self.heartbeat_interval)
 
-    async def do_moveAltitude(self, data):
-        """Moves the altitude axis of the CBP.
-
-        Parameters
-        ----------
-        data
-
-        Returns
-        -------
-        None
-
-        """
-        self.assert_enabled("moveAltitude")
-        await self.model.move_altitude(data.altitude)
-        self.cmd_moveAltitude.ack_in_progress(data, "In progress")
-        await asyncio.sleep(self.cbp_speed * self.factor)
-
     async def do_setFocus(self, data):
         """Sets the focus.
 
@@ -163,6 +150,10 @@ class CBPCSC(salobj.ConfigurableCsc):
         """
         self.assert_enabled("park")
         await self.model.park(data.park)
+
+    async def do_unpark(self, data):
+        self.assert_enabled("unpark")
+        await self.model.unpark()
 
     async def do_changeMask(self, data):
         """Changes the mask.
@@ -351,7 +342,10 @@ class CBPModel:
         None
 
         """
-        await self._cbp.set_park(1)
+        await self._cbp.set_park()
+
+    async def unpark(self):
+        await self._cpb.set_unpark()
 
     async def connect(self):
         await self._cbp.connect()
