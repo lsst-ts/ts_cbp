@@ -115,6 +115,7 @@ class CBPComponent:
         }
         mask_dict["9"].name = "Unknown"
         self.masks = types.SimpleNamespace(**mask_dict)
+        self.log.info(f"{self.masks}")
 
     async def send_command(self, msg):
         """Sends the encoded command and reads the reply.
@@ -131,7 +132,9 @@ class CBPComponent:
             await self.writer.drain()
             reply = await self.reader.readuntil(b"\r")
             reply = reply.decode("ascii").strip("\r")
-            reply = reply[0]
+            self.log.info(reply)
+            if reply != "":
+                reply = reply[0]
             return reply
 
     async def connect(self):
@@ -383,19 +386,18 @@ class CBPComponent:
         await self.get_mask_rotation()
 
     def configure(self, config):
-        self.config = config
-        self.host = self.config.address
-        self.port = self.config.port
-        self.masks.mask1.name = self.config.mask1.name
-        self.masks.mask1.rotation = self.config.mask1.rotation
-        self.masks.mask2.name = self.config.mask2.name
-        self.masks.mask2.rotation = self.config.mask2.rotation
-        self.masks.mask3.name = self.config.mask3.name
-        self.masks.mask3.rotation = self.config.mask3.rotation
-        self.masks.mask4.name = self.config.mask4.name
-        self.masks.mask4.rotation = self.config.mask4.rotation
-        self.masks.mask5.name = self.config.mask5.name
-        self.masks.mask5.rotation = self.config.mask5.rotation
+        self.host = config.address
+        self.port = config.port
+        self.masks.__dict__.get("1").name = config.mask1["name"]
+        self.masks.__dict__.get("1").rotation = config.mask1["rotation"]
+        self.masks.__dict__.get("2").name = config.mask2["name"]
+        self.masks.__dict__.get("2").rotation = config.mask2["rotation"]
+        self.masks.__dict__.get("3").name = config.mask3["name"]
+        self.masks.__dict__.get("3").rotation = config.mask3["rotation"]
+        self.masks.__dict__.get("4").name = config.mask4["name"]
+        self.masks.__dict__.get("4").rotation = config.mask4["rotation"]
+        self.masks.__dict__.get("5").name = config.mask5["name"]
+        self.masks.__dict__.get("5").rotation = config.mask5["rotation"]
 
     async def publish(self):
         """This updates the attributes within the component.

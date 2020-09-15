@@ -16,7 +16,7 @@ class MockServer:
         self.focus = 0
         self.mask = 1
         self.panic_status = False
-        self.encoders = [False, False, False, False, False, False]
+        self.encoders = [False, False, False, False, False]
         self.park = False
         self.auto_park = False
         self.masks = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
@@ -27,17 +27,20 @@ class MockServer:
             "msk": self.do_mask,
             "rot": self.do_rotation,
             "wdpanic": self.do_panic,
-            "autopark": None,
-            "park": None,
-            "AAstat": None,
-            "ABstat": None,
-            "ACstat": None,
-            "ADstat": None,
-            "AEstat": None,
+            "autopark": self.do_autopark,
+            "park": self.do_park,
+            "AAstat": self.do_aastat,
+            "ABstat": self.do_abstat,
+            "ACstat": self.do_acstat,
+            "ADstat": self.do_adstat,
+            "AEstat": self.do_aestat,
         }
         self.commands = [
             re.compile(r"^(?P<cmd>az)=\?$"),
             re.compile(r"^(?P<cmd>wdpanic)=\?$"),
+            re.compile(r"^(?P<cmd>park)=\?$"),
+            re.compile(r"^(?P<cmd>park)=(?P<parameter>[01])$"),
+            re.compile(r"^(?P<cmd>A[ABCDE]stat)=\?$"),
         ]
         self.log = logging.getLogger(__name__)
 
@@ -71,7 +74,15 @@ class MockServer:
                     if command_group in self.command_calls:
                         self.log.info(f"{command_group}")
                         called_command = self.command_calls[command_group]
-                        msg = await called_command() + "\r"
+                        try:
+                            parameter = matched_command.group("parameter")
+                            self.log.info(f"{parameter}")
+                        except IndexError:
+                            parameter = None
+                        if parameter is None:
+                            msg = await called_command() + "\r"
+                        else:
+                            msg = await called_command(parameter) + "\r"
                         msg = msg.encode("ascii")
                         writer.write(msg)
                         self.log.info(f"Wrote {msg}")
@@ -114,6 +125,25 @@ class MockServer:
             return f"{int(self.park)}"
         else:
             self.park = bool(park)
+            return ""
 
     async def do_panic(self):
         return f"{int(self.panic_status)}"
+
+    async def do_aastat(self):
+        return f"{int(self.encoders[0])}"
+
+    async def do_abstat(self):
+        return f"{int(self.encoders[1])}"
+
+    async def do_acstat(self):
+        return f"{int(self.encoders[2])}"
+
+    async def do_adstat(self):
+        return f"{int(self.encoders[3])}"
+
+    async def do_aestat(self):
+        return f"{int(self.encoders[4])}"
+
+    async def do_autopark(self):
+        return f"{int(self.auto_park)}"

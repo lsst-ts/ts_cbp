@@ -24,7 +24,7 @@ test:
         - pytest-flake8
         - pytest-cov
         - asynctest
-        - ts-dds
+        - ts-dds <= v6.9.0
         - ts-idl
         - ts-salobj
         - black
