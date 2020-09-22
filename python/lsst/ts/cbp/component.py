@@ -182,8 +182,7 @@ class CBPComponent:
         Parameters
         ----------
         position: float
-            This is the value in degrees that is sent to the CBP in order to
-            move the horizontal axis.
+            The desired azimuth (degrees).
 
         Returns
         -------
@@ -196,7 +195,9 @@ class CBPComponent:
             await self.send_command(f"new_az={position}")
 
     async def get_elevation(self):
-        """This gets the altitude value from the altitude encoder in degrees.
+        """Read and record the mount elevation encoder, in degrees.
+
+        Note that the low-level controller calls this axis "altitude".
 
         Returns
         -------
@@ -211,7 +212,7 @@ class CBPComponent:
         Parameters
         ----------
         position: float
-            The value to move the elevation to which is. In degrees.
+            The desired elevation (degrees)
 
         Returns
         -------
