@@ -22,9 +22,9 @@ class CscTestCase(asynctest.TestCase, salobj.BaseCscTestCase):
                 enabled_commands=(
                     "changeMask",
                     "clearFault",
-                    "moveAltitude",
-                    "moveAzimuth",
+                    "move",
                     "park",
+                    "unpark",
                     "setFocus",
                 )
             )

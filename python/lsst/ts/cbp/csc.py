@@ -3,7 +3,7 @@ from . import component
 import asyncio
 from lsst.ts import salobj
 
-__all__ = ["CBPCSC", "CBPModel"]
+__all__ = ["CBPCSC"]
 
 
 class CBPCSC(salobj.ConfigurableCsc):
@@ -64,13 +64,13 @@ class CBPCSC(salobj.ConfigurableCsc):
             simulation_mode=simulation_mode,
             schema_path=schema_path,
         )
-        self.model = CBPModel()
+        self.model = component.CBPComponent()
         self.cbp_speed = speed
         self.factor = factor
         self.log.info("CBP CSC initialized")
 
-    async def do_moveAzimuth(self, data):
-        """Moves the azimuth axis of the CBP.
+    async def do_move(self, data):
+        """Move the CBP mount to a specified position.
 
         Parameters
         ----------
@@ -81,11 +81,15 @@ class CBPCSC(salobj.ConfigurableCsc):
         None
 
         """
-        self.log.debug("Begin moveAzimuth")
-        self.assert_enabled("moveAzimuth")
-        await self.model.move_azimuth(data.azimuth)
-        self.log.debug("moveAzimuth sent to model")
-        self.cmd_moveAzimuth.ack_in_progress(data, "In progress")
+        self.log.debug("Begin move")
+        self.assert_enabled("move")
+        await asyncio.join(
+            [
+                self.model.move_elevation(data.elevation),
+                self.model.move_azimuth(data.azimuth),
+            ]
+        )
+        self.cmd_move.ack_in_progress(data, "In progress")
         await asyncio.sleep(self.cbp_speed * self.factor)
 
     async def telemetry(self):
@@ -100,7 +104,7 @@ class CBPCSC(salobj.ConfigurableCsc):
             self.log.debug("Begin sending telemetry")
             await self.model.publish()
             self.tel_azimuth.set_put(azimuth=self.model.azimuth)
-            self.tel_altitude.set_put(altitude=self.model.altitude)
+            self.tel_elevation.set_put(elevation=self.model.elevation)
             self.tel_focus.set_put(focus=self.model.focus)
             self.tel_mask.set_put(
                 mask=self.model.mask, mask_rotation=self.model.mask_rotation
@@ -110,33 +114,16 @@ class CBPCSC(salobj.ConfigurableCsc):
             )
             self.tel_status.set_put(
                 panic=self.model.panic_status,
-                azimuth=self.model.azimuth_status,
-                altitude=self.model.altitude_status,
-                mask=self.model.mask_status,
-                mask_rotation=self.model.mask_rotation_status,
-                focus=self.model.focus_status,
+                azimuth=self.model.encoder_status.AZIMUTH,
+                altitude=self.model.encoder_status.ELEVATION,
+                mask=self.model.encoder_status.MASK_SELECT,
+                mask_rotation=self.model.encoder_status.MASK_ROTATE,
+                focus=self.model.encoder_status.FOCUS,
             )
             if self.model.panic_status == 1:
-                self.fault()
+                self.fault("CBP Panicked. Check hardware and reset device.")
 
             await asyncio.sleep(self.heartbeat_interval)
-
-    async def do_moveAltitude(self, data):
-        """Moves the altitude axis of the CBP.
-
-        Parameters
-        ----------
-        data
-
-        Returns
-        -------
-        None
-
-        """
-        self.assert_enabled("moveAltitude")
-        await self.model.move_altitude(data.altitude)
-        self.cmd_moveAltitude.ack_in_progress(data, "In progress")
-        await asyncio.sleep(self.cbp_speed * self.factor)
 
     async def do_setFocus(self, data):
         """Sets the focus.
@@ -154,7 +141,7 @@ class CBPCSC(salobj.ConfigurableCsc):
         await self.model.change_focus(data.focus)
 
     async def do_park(self, data):
-        """Parks the CBP.
+        """Park the CBP.
 
         Returns
         -------
@@ -162,7 +149,12 @@ class CBPCSC(salobj.ConfigurableCsc):
 
         """
         self.assert_enabled("park")
-        await self.model.park(data.park)
+        await self.model.set_park()
+
+    async def do_unpark(self, data):
+        """Unpark the CBP."""
+        self.assert_enabled("unpark")
+        await self.model.set_unpark()
 
     async def do_changeMask(self, data):
         """Changes the mask.
@@ -179,20 +171,6 @@ class CBPCSC(salobj.ConfigurableCsc):
         self.assert_enabled("changeMask")
         await self.model.change_mask(data.mask)
 
-    async def do_clearFault(self, data):
-        """
-
-        Parameters
-        ----------
-        data
-
-        Returns
-        -------
-        None
-
-        """
-        self.assert_enabled("clearFault")
-
     async def begin_enable(self, data):
         """Overrides the begin_enable function in salobj.BaseCsc to make sure
         the CBP is un-parked.
@@ -206,7 +184,7 @@ class CBPCSC(salobj.ConfigurableCsc):
         None
 
         """
-        await self.model._cbp.set_park()
+        await self.model.set_unpark()
 
     async def end_start(self, data):
         await self.model.connect()
@@ -225,149 +203,8 @@ class CBPCSC(salobj.ConfigurableCsc):
 
     async def implement_simulation_mode(self, simulation_mode):
         if simulation_mode == 0:
-            self.model._cbp.set_simulation_mode(simulation_mode)
+            self.model.set_simulation_mode(simulation_mode)
         elif simulation_mode == 1:
-            self.model._cbp.set_simulation_mode(simulation_mode)
+            self.model.set_simulation_mode(simulation_mode)
         else:
             raise salobj.ExpectedError(f"{simulation_mode} is not a valid value")
-
-
-class CBPModel:
-    """This is the model that connects the CSC and the component together.
-
-    Attributes
-    ----------
-    azimuth : `float`
-        The last updated position of the azimuth encoder
-    altitude : `float`
-        The last updated position of the altitude encoder
-    mask : `str`
-        The last updated mask name of the mask encoder.
-    mask_rotation : `float`
-        The last updated mask rotation of the rotation encoder.
-    focus : `float`
-        The last updated focus of the focus encoder.
-    panic_status : `int`
-        The last updated panic_status of the status byte.
-    azimuth_status : `int`
-        The last updated azimuth_status of the status byte.
-    altitude_status : `int`
-        The last updated altitude_status of the status byte.
-    mask_status : `int`
-        The last updated mask_status of the status byte.
-    mask_rotation_status : `int`
-        The last updated mask_rotation_status of the status byte.
-    focus_status : `int`
-        The last updated focus_status of the status byte.
-    auto_parked : `int`
-        The last updated auto_parked attribute.
-    parked : `int`
-        The last updated parked attribute.
-    """
-
-    def __init__(self):
-        self._cbp = component.CBPComponent()
-        self.azimuth = self._cbp.azimuth
-        self.altitude = self._cbp.altitude
-        self.mask = self._cbp.mask
-        self.mask_rotation = self._cbp.mask_rotation
-        self.focus = self._cbp.focus
-        self.panic_status = self._cbp.panic_status
-        self.azimuth_status = bool(self._cbp.encoder_status.AZIMUTH)
-        self.altitude_status = bool(self._cbp.encoder_status.ELEVATION)
-        self.mask_status = bool(self._cbp.encoder_status.MASK_SELECT)
-        self.mask_rotation_status = bool(self._cbp.encoder_status.MASK_ROTATE)
-        self.focus_status = bool(self._cbp.encoder_status.FOCUS)
-        self.auto_parked = self._cbp.auto_park
-        self.parked = self._cbp.park
-
-    async def move_azimuth(self, azimuth: float):
-        """Calls the move_azimuth function of the component.
-
-        Parameters
-        ----------
-        azimuth: float
-            The azimuth in degrees to move to.
-
-        Returns
-        -------
-        None
-
-        """
-        await self._cbp.move_azimuth(azimuth)
-
-    async def move_altitude(self, altitude: float):
-        """Calls the move_altitude function of the component.
-
-        Parameters
-        ----------
-        altitude: float
-            The altitude in degrees to move CBP to.
-
-        Returns
-        -------
-        None
-
-        """
-        await self._cbp.move_altitude(altitude)
-
-    async def change_mask(self, mask: str):
-        """Calls the change_mask function of the component.
-
-        Parameters
-        ----------
-        mask: str
-            The name of the mask to change to.
-
-        Returns
-        -------
-        None
-
-        """
-        mask_rotation = self._cbp.mask_dictionary[mask].rotation
-        await self._cbp.set_mask(mask)
-        await self._cbp.set_mask_rotation(mask_rotation)
-
-    async def change_focus(self, focus: int):
-        """Calls the change_focus function of the CBP component,
-
-        Parameters
-        ----------
-        focus: int
-            The focus in microns to change to.
-
-        Returns
-        -------
-        None
-
-        """
-        await self._cbp.change_focus(focus)
-
-    async def park(self):
-        """Calls the park function of the component.
-
-        Returns
-        -------
-        None
-
-        """
-        await self._cbp.set_park(1)
-
-    async def connect(self):
-        await self._cbp.connect()
-
-    async def disconnect(self):
-        await self._cbp.disconnect()
-
-    def configure(self, config):
-        self._cbp.configure(config)
-
-    async def publish(self):
-        """Calls the publish function of the component.
-
-        Returns
-        -------
-        None
-
-        """
-        await self._cbp.publish()

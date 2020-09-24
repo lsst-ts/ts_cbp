@@ -118,7 +118,7 @@ class CBPComponent:
         self.log.info(f"{self.masks}")
 
     async def send_command(self, msg):
-        """Sends the encoded command and reads the reply.
+        """Send the encoded command and read the reply.
 
         Parameters
         ----------
@@ -138,7 +138,7 @@ class CBPComponent:
             return reply
 
     async def connect(self):
-        """Creates a socket and connects to the CBP's static address and
+        """Create a socket and connect to the CBP's static address and
         designated port.
 
 
@@ -155,7 +155,7 @@ class CBPComponent:
             )
 
     async def disconnect(self):
-        """Disconnects from the tcp socket.
+        """Disconnect from the tcp socket.
         """
         async with self.lock:
             self.reader = None
@@ -168,7 +168,7 @@ class CBPComponent:
                     self.writer = None
 
     async def get_azimuth(self):
-        """Gets azimuth value from azimuth encoder which is in degrees.
+        """Get azimuth value from azimuth encoder which is in degrees.
 
         Returns
         -------
@@ -182,8 +182,7 @@ class CBPComponent:
         Parameters
         ----------
         position: float
-            This is the value in degrees that is sent to the CBP in order to
-            move the horizontal axis.
+            The desired azimuth (degrees).
 
         Returns
         -------
@@ -195,24 +194,25 @@ class CBPComponent:
         else:
             await self.send_command(f"new_az={position}")
 
-    async def get_altitude(self):
-        """This gets the altitude value from the altitude encoder in degrees.
+    async def get_elevation(self):
+        """Read and record the mount elevation encoder, in degrees.
+
+        Note that the low-level controller calls this axis "altitude".
 
         Returns
         -------
         None
 
         """
-        self.log.debug("get_altitude sent")
-        self.altitude = float(await self.send_command("alt=?"))
+        self.elevation = float(await self.send_command("alt=?"))
 
-    async def move_altitude(self, position: float):
+    async def move_elevation(self, position: float):
         """This moves the vertical axis to the value that the user sent.
 
         Parameters
         ----------
         position: float
-            The value to move the altitude to which is in degrees.
+            The desired elevation (degrees)
 
         Returns
         -------
@@ -340,25 +340,22 @@ class CBPComponent:
         """
         self.park = bool(await self.send_command("park=?"))
 
-    async def set_park(self, park: int = 0):
-        """A function that tells the CBP to park or un-park depending on the
-        value given.
-
-        Parameters
-        ----------
-        park: int {0,1}
-            A boolean int which tells the CBP to park or not.
+    async def set_park(self):
+        """Park the CBP
 
         Returns
         -------
         None
 
         """
-        park = bool(park)
-        await self.send_command(f"park={int(park)}")
+        await self.send_command(f"park=1")
+
+    async def set_unpark(self):
+        """Unpark the CBP."""
+        await self.send_command("park=0")
 
     async def check_cbp_status(self):
-        """Checks the status of the encoders.
+        """Read and record the status of the encoders.
 
         Returns
         -------
