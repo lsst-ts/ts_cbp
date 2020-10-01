@@ -3,18 +3,26 @@ __all__ = ["CBPComponent", "Status"]
 import logging
 import asyncio
 import types
-import enum
 
 
-class Status(enum.Flag):
-    """The status for the encoders.
-    """
+class Status:
+    """The status for the encoders."""
 
-    AZIMUTH = enum.auto()
-    ELEVATION = enum.auto()
-    MASK_SELECT = enum.auto()
-    MASK_ROTATE = enum.auto()
-    FOCUS = enum.auto()
+    def __init__(self):
+        self.AZIMUTH = 0
+        self.ELEVATION = 0
+        self.MASK_SELECT = 0
+        self.MASK_ROTATE = 0
+        self.FOCUS = 0
+
+
+class Motion:
+    def __init__(self):
+        self.AZIMUTH = False
+        self.ELEVATION = False
+        self.MASK_SELECT = False
+        self.MASK_ROTATE = False
+        self.FOCUS = False
 
 
 class CBPComponent:
@@ -94,28 +102,55 @@ class CBPComponent:
         self.azimuth = None
         self.mask = None
         self.mask_rotation = None
-
         self.focus = None
+
+        self.altitude_target = 0
+        self.azimuth_target = 0
+        self.mask_target = "Mask 1"
+        self.mask_rotation_target = 0
+        self.focus_target = 0
+
         self.host = None
         self.port = None
         self.panic_status = None
         self.auto_park = None
         self.park = None
         self.simulation_mode = 0
-        self.encoder_status = Status
+        self.encoder_status = Status()
+        self.encoder_motion = Motion()
+        self.in_motion = False
+        self.connected = False
         self.generate_mask_info()
         self.log.info("CBP component initialized")
 
     def generate_mask_info(self):
-        """Generates initial mask info.
-        """
+        """Generates initial mask info."""
         mask_dict = {
             f"{i}": types.SimpleNamespace(name=f"Empty {i}", rotation=0, id=i)
             for i in (1, 2, 3, 4, 5, 9)
         }
         mask_dict["9"].name = "Unknown"
         self.masks = types.SimpleNamespace(**mask_dict)
-        self.log.info(f"{self.masks}")
+
+    def get_motion_status(self):
+        self.encoder_motion.AZIMUTH = self.azimuth != self.azimuth_target
+        self.encoder_motion.ELEVATION = self.elevation != self.altitude_target
+        self.encoder_motion.MASK_SELECT = self.mask != self.mask_target
+        self.encoder_motion.MASK_ROTATE = (
+            self.mask_rotation != self.mask_rotation_target
+        )
+        self.encoder_motion.FOCUS = self.focus != self.focus_target
+        self.log.info(
+            f"azimuth: {self.encoder_motion.AZIMUTH}\nelevation: {self.encoder_motion.ELEVATION}"
+        )
+        self.in_motion = (
+            self.encoder_motion.AZIMUTH
+            or self.encoder_motion.ELEVATION
+            or self.encoder_motion.MASK_SELECT
+            or self.encoder_motion.MASK_ROTATE
+            or self.encoder_motion.FOCUS
+        )
+        self.log.info(f"In motion:{self.in_motion}")
 
     async def send_command(self, msg):
         """Send the encoded command and read the reply.
@@ -134,7 +169,8 @@ class CBPComponent:
             reply = reply.decode("ascii").strip("\r")
             self.log.info(reply)
             if reply != "":
-                reply = reply[0]
+                reply = reply
+                self.log.info(reply)
             return reply
 
     async def connect(self):
@@ -153,10 +189,10 @@ class CBPComponent:
             self.reader, self.writer = await asyncio.wait_for(
                 connect_task, timeout=self.long_timeout
             )
+            self.connected = True
 
     async def disconnect(self):
-        """Disconnect from the tcp socket.
-        """
+        """Disconnect from the tcp socket."""
         async with self.lock:
             self.reader = None
             if self.writer is not None:
@@ -166,6 +202,7 @@ class CBPComponent:
                 finally:
                     self.writer.close()
                     self.writer = None
+                    self.connected = False
 
     async def get_azimuth(self):
         """Get azimuth value from azimuth encoder which is in degrees.
@@ -192,6 +229,8 @@ class CBPComponent:
         if position < -45 or position > 45:
             raise ValueError("New azimuth value exceeds Azimuth limit.")
         else:
+            self.azimuth_target = position
+            self.in_motion = True
             await self.send_command(f"new_az={position}")
 
     async def get_elevation(self):
@@ -222,6 +261,8 @@ class CBPComponent:
         if position < -69 or position > 45:
             raise ValueError("New altitude value exceeds altitude limit.")
         else:
+            self.altitude_target = position
+            self.in_motion = True
             await self.send_command(f"new_alt={position}")
 
     async def get_focus(self):
@@ -250,7 +291,9 @@ class CBPComponent:
         if position < 0 or position > 13000:
             raise ValueError("New focus value exceeds focus limit.")
         else:
-            await self.send_command(f"new_foc={position}")
+            self.focus_target = int(position)
+            self.in_motion = True
+            await self.send_command(f"new_foc={int(position)}")
 
     async def get_mask(self):
         """This gets the current mask value from the encoder which is converted
@@ -280,6 +323,9 @@ class CBPComponent:
         None
 
         """
+        self.mask_target = self.masks.__dict__.get(mask).name
+        self.in_motion = True
+        self.mask = self.masks.__dict__.get(mask).name
         await self.send_command(f"new_msk={self.masks.__dict__.get(mask).id}")
 
     async def get_mask_rotation(self):
@@ -308,6 +354,7 @@ class CBPComponent:
         """
         if mask_rotation < 0 or mask_rotation > 360:
             raise ValueError("New mask rotation value exceeds mask rotation limits.")
+        self.mask_rotation_target = mask_rotation
         await self.send_command(f"new_rot={mask_rotation}")
 
     async def check_panic_status(self):
@@ -318,7 +365,7 @@ class CBPComponent:
         None
 
         """
-        self.panic_status = bool(await self.send_command("wdpanic=?"))
+        self.panic_status = bool(int(await self.send_command("wdpanic=?")))
 
     async def check_auto_park(self):
         """Gets the autopark variable from CBP
@@ -328,7 +375,7 @@ class CBPComponent:
         None
 
         """
-        self.auto_park = bool(await self.send_command("autopark=?"))
+        self.auto_park = bool(int(await self.send_command("autopark=?")))
 
     async def check_park(self):
         """Gets the park variable from CBP
@@ -338,7 +385,8 @@ class CBPComponent:
         None
 
         """
-        self.park = bool(await self.send_command("park=?"))
+        self.park = bool(int(await self.send_command("park=?")))
+        self.log.info(f"Park: {self.park}")
 
     async def set_park(self):
         """Park the CBP
@@ -348,10 +396,12 @@ class CBPComponent:
         None
 
         """
+        self.in_motion = True
         await self.send_command(f"park=1")
 
     async def set_unpark(self):
         """Unpark the CBP."""
+        self.in_motion = True
         await self.send_command("park=0")
 
     async def check_cbp_status(self):
@@ -362,11 +412,11 @@ class CBPComponent:
         None
 
         """
-        self.encoder_status.AZIMUTH = bool(await self.send_command("AAstat=?"))
-        self.encoder_status.ELEVATION = bool(await self.send_command("ABstat=?"))
-        self.encoder_status.MASK_SELECT = bool(await self.send_command("ACstat=?"))
-        self.encoder_status.MASK_ROTATE = bool(await self.send_command("ADstat=?"))
-        self.encoder_status.FOCUS = bool(await self.send_command("AEstat=?"))
+        self.encoder_status.AZIMUTH = bool(int(await self.send_command("AAstat=?")))
+        self.encoder_status.ELEVATION = bool(int(await self.send_command("ABstat=?")))
+        self.encoder_status.MASK_SELECT = bool(int(await self.send_command("ACstat=?")))
+        self.encoder_status.MASK_ROTATE = bool(int(await self.send_command("ADstat=?")))
+        self.encoder_status.FOCUS = bool(int(await self.send_command("AEstat=?")))
 
     async def get_cbp_telemetry(self):
         """Gets the position data of the CBP.
@@ -376,7 +426,7 @@ class CBPComponent:
         None
 
         """
-        await self.get_altitude()
+        await self.get_elevation()
         await self.get_azimuth()
         await self.get_focus()
         await self.get_mask()
@@ -409,6 +459,7 @@ class CBPComponent:
         await self.check_park()
         await self.check_auto_park()
         await self.get_cbp_telemetry()
+        self.get_motion_status()
 
     def set_simulation_mode(self, simulation_mode):
         self.simulation_mode = simulation_mode

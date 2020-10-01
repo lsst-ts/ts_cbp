@@ -1,5 +1,5 @@
 import pathlib
-from . import component
+from . import component, mock_server
 import asyncio
 from lsst.ts import salobj
 
@@ -45,15 +45,14 @@ class CBPCSC(salobj.ConfigurableCsc):
 
     """
 
+    valid_simulation_modes = (0, 1)
+
     def __init__(
         self,
+        simulation_mode,
         initial_state: salobj.State = salobj.State.STANDBY,
         config_dir=None,
-        speed=3.5,
-        factor=1.25,
-        simulation_mode=0,
     ):
-
         schema_path = pathlib.Path(__file__).parents[4].joinpath("schema", "CBP.yaml")
 
         super().__init__(
@@ -65,8 +64,8 @@ class CBPCSC(salobj.ConfigurableCsc):
             schema_path=schema_path,
         )
         self.model = component.CBPComponent()
-        self.cbp_speed = speed
-        self.factor = factor
+        self.simulator = None
+        self.telemetry_task = salobj.make_done_future()
         self.log.info("CBP CSC initialized")
 
     async def do_move(self, data):
@@ -83,14 +82,32 @@ class CBPCSC(salobj.ConfigurableCsc):
         """
         self.log.debug("Begin move")
         self.assert_enabled("move")
-        await asyncio.join(
-            [
-                self.model.move_elevation(data.elevation),
-                self.model.move_azimuth(data.azimuth),
-            ]
+        await asyncio.gather(
+            self.model.move_elevation(data.elevation),
+            self.model.move_azimuth(data.azimuth),
         )
-        self.cmd_move.ack_in_progress(data, "In progress")
-        await asyncio.sleep(self.cbp_speed * self.factor)
+        self.evt_target.set_put(
+            azimuth=self.model.azimuth_target,
+            elevation=self.model.altitude_target,
+            focus=self.model.focus_target,
+            mask=self.model.mask_target,
+            mask_rotation=self.model.mask_rotation_target,
+        )
+        self.evt_moving.set_put(
+            azimuth=self.model.encoder_motion.AZIMUTH,
+            elevation=self.model.encoder_motion.ELEVATION,
+            focus=self.model.encoder_motion.FOCUS,
+            mask=self.model.encoder_motion.MASK_SELECT,
+            mask_rotation=self.model.encoder_motion.MASK_ROTATE,
+        )
+        await asyncio.wait_for(self.motion_finished(), 20)
+        self.evt_moving.set_put(
+            azimuth=self.model.encoder_motion.AZIMUTH,
+            elevation=self.model.encoder_motion.ELEVATION,
+            focus=self.model.encoder_motion.FOCUS,
+            mask=self.model.encoder_motion.MASK_SELECT,
+            mask_rotation=self.model.encoder_motion.MASK_ROTATE,
+        )
 
     async def telemetry(self):
         """Actually updates all of the sal telemetry objects.
@@ -110,18 +127,18 @@ class CBPCSC(salobj.ConfigurableCsc):
                 mask=self.model.mask, mask_rotation=self.model.mask_rotation
             )
             self.tel_parked.set_put(
-                autoparked=self.model.auto_parked, parked=self.model.parked
+                autoparked=self.model.auto_park, parked=self.model.park
             )
             self.tel_status.set_put(
                 panic=self.model.panic_status,
                 azimuth=self.model.encoder_status.AZIMUTH,
-                altitude=self.model.encoder_status.ELEVATION,
+                elevation=self.model.encoder_status.ELEVATION,
                 mask=self.model.encoder_status.MASK_SELECT,
                 mask_rotation=self.model.encoder_status.MASK_ROTATE,
                 focus=self.model.encoder_status.FOCUS,
             )
-            if self.model.panic_status == 1:
-                self.fault("CBP Panicked. Check hardware and reset device.")
+            if self.model.panic_status:
+                self.fault(1, "CBP Panicked. Check hardware and reset device.")
 
             await asyncio.sleep(self.heartbeat_interval)
 
@@ -139,6 +156,28 @@ class CBPCSC(salobj.ConfigurableCsc):
         """
         self.assert_enabled("setFocus")
         await self.model.change_focus(data.focus)
+        self.evt_target.set_put(
+            azimuth=self.model.azimuth_target,
+            elevation=self.model.altitude_target,
+            focus=self.model.focus_target,
+            mask=self.model.mask_target,
+            mask_rotation=self.model.mask_rotation_target,
+        )
+        self.evt_moving.set_put(
+            azimuth=self.model.encoder_motion.AZIMUTH,
+            elevation=self.model.encoder_motion.ELEVATION,
+            focus=self.model.encoder_motion.FOCUS,
+            mask=self.model.encoder_motion.MASK_SELECT,
+            mask_rotation=self.model.encoder_motion.MASK_ROTATE,
+        )
+        await asyncio.wait_for(self.motion_finished(), 20)
+        self.evt_moving.set_put(
+            azimuth=self.model.encoder_motion.AZIMUTH,
+            elevation=self.model.encoder_motion.ELEVATION,
+            focus=self.model.encoder_motion.FOCUS,
+            mask=self.model.encoder_motion.MASK_SELECT,
+            mask_rotation=self.model.encoder_motion.MASK_ROTATE,
+        )
 
     async def do_park(self, data):
         """Park the CBP.
@@ -150,11 +189,41 @@ class CBPCSC(salobj.ConfigurableCsc):
         """
         self.assert_enabled("park")
         await self.model.set_park()
+        self.evt_moving.set_put(
+            azimuth=self.model.encoder_motion.AZIMUTH,
+            elevation=self.model.encoder_motion.ELEVATION,
+            focus=self.model.encoder_motion.FOCUS,
+            mask=self.model.encoder_motion.MASK_SELECT,
+            mask_rotation=self.model.encoder_motion.MASK_ROTATE,
+        )
+        await asyncio.wait_for(self.motion_finished(), 20)
+        self.evt_moving.set_put(
+            azimuth=self.model.encoder_motion.AZIMUTH,
+            elevation=self.model.encoder_motion.ELEVATION,
+            focus=self.model.encoder_motion.FOCUS,
+            mask=self.model.encoder_motion.MASK_SELECT,
+            mask_rotation=self.model.encoder_motion.MASK_ROTATE,
+        )
 
     async def do_unpark(self, data):
         """Unpark the CBP."""
         self.assert_enabled("unpark")
         await self.model.set_unpark()
+        self.evt_moving.set_put(
+            azimuth=self.model.encoder_motion.AZIMUTH,
+            elevation=self.model.encoder_motion.ELEVATION,
+            focus=self.model.encoder_motion.FOCUS,
+            mask=self.model.encoder_motion.MASK_SELECT,
+            mask_rotation=self.model.encoder_motion.MASK_ROTATE,
+        )
+        await asyncio.wait_for(self.motion_finished(), 20)
+        self.evt_moving.set_put(
+            azimuth=self.model.encoder_motion.AZIMUTH,
+            elevation=self.model.encoder_motion.ELEVATION,
+            focus=self.model.encoder_motion.FOCUS,
+            mask=self.model.encoder_motion.MASK_SELECT,
+            mask_rotation=self.model.encoder_motion.MASK_ROTATE,
+        )
 
     async def do_changeMask(self, data):
         """Changes the mask.
@@ -169,30 +238,48 @@ class CBPCSC(salobj.ConfigurableCsc):
 
         """
         self.assert_enabled("changeMask")
-        await self.model.change_mask(data.mask)
+        await self.model.set_mask(data.mask)
+        self.evt_target.set_put(
+            azimuth=self.model.azimuth_target,
+            elevation=self.model.altitude_target,
+            focus=self.model.focus_target,
+            mask=self.model.mask_target,
+            mask_rotation=self.model.mask_rotation_target,
+        )
+        self.evt_moving.set_put(
+            azimuth=self.model.encoder_motion.AZIMUTH,
+            elevation=self.model.encoder_motion.ELEVATION,
+            focus=self.model.encoder_motion.FOCUS,
+            mask=self.model.encoder_motion.MASK_SELECT,
+            mask_rotation=self.model.encoder_motion.MASK_ROTATE,
+        )
+        await asyncio.wait_for(self.motion_finished(), 20)
+        self.evt_moving.set_put(
+            azimuth=self.model.encoder_motion.AZIMUTH,
+            elevation=self.model.encoder_motion.ELEVATION,
+            focus=self.model.encoder_motion.FOCUS,
+            mask=self.model.encoder_motion.MASK_SELECT,
+            mask_rotation=self.model.encoder_motion.MASK_ROTATE,
+        )
 
-    async def begin_enable(self, data):
-        """Overrides the begin_enable function in salobj.BaseCsc to make sure
-        the CBP is un-parked.
-
-        Parameters
-        ----------
-        data
-
-        Returns
-        -------
-        None
-
-        """
-        await self.model.set_unpark()
-
-    async def end_start(self, data):
-        await self.model.connect()
-        self.telemetry_task = asyncio.ensure_future(self.telemetry())
-
-    async def end_standby(self, data):
-        self.telemetry_task.cancel()
-        await self.model.disconnect()
+    async def handle_summary_state(self):
+        if self.disabled_or_enabled:
+            if self.simulation_mode and self.simulator is None:
+                self.simulator = mock_server.MockServer()
+                await self.simulator.start()
+            if self.telemetry_task.done():
+                self.telemetry_task = asyncio.create_task(self.telemetry())
+            if self.model.connected is False:
+                await self.model.connect()
+            if self.model.park is True:
+                await self.model.set_unpark()
+        else:
+            if self.simulator is not None:
+                await self.simulator.stop()
+                self.simulator = None
+            if self.model.connected is True:
+                await self.model.disconnect()
+            self.telemetry_task.cancel()
 
     async def configure(self, config):
         self.model.configure(config)
@@ -201,10 +288,15 @@ class CBPCSC(salobj.ConfigurableCsc):
     def get_config_pkg():
         return "ts_config_mtcalsys"
 
-    async def implement_simulation_mode(self, simulation_mode):
-        if simulation_mode == 0:
-            self.model.set_simulation_mode(simulation_mode)
-        elif simulation_mode == 1:
-            self.model.set_simulation_mode(simulation_mode)
-        else:
-            raise salobj.ExpectedError(f"{simulation_mode} is not a valid value")
+    async def close_tasks(self):
+        await super().close_tasks()
+        self.telemetry_task.cancel()
+        await self.model.disconnect()
+        if self.simulator is not None:
+            await self.simulator.stop()
+            self.simulator = None
+
+    async def motion_finished(self):
+        while self.model.in_motion:
+            await asyncio.sleep(self.heartbeat_interval)
+        self.log.info("Motion finished")
