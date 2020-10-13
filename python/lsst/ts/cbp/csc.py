@@ -93,20 +93,20 @@ class CBPCSC(salobj.ConfigurableCsc):
             mask=self.model.mask_target,
             mask_rotation=self.model.mask_rotation_target,
         )
-        self.evt_moving.set_put(
-            azimuth=self.model.encoder_motion.AZIMUTH,
-            elevation=self.model.encoder_motion.ELEVATION,
-            focus=self.model.encoder_motion.FOCUS,
-            mask=self.model.encoder_motion.MASK_SELECT,
-            mask_rotation=self.model.encoder_motion.MASK_ROTATE,
+        self.evt_inPosition.set_put(
+            azimuth=self.model.encoder_motion.azimuth,
+            elevation=self.model.encoder_motion.elevation,
+            focus=self.model.encoder_motion.focus,
+            mask=self.model.encoder_motion.mask_select,
+            mask_rotation=self.model.encoder_motion.mask_rotate,
         )
-        await asyncio.wait_for(self.motion_finished(), 20)
-        self.evt_moving.set_put(
-            azimuth=self.model.encoder_motion.AZIMUTH,
-            elevation=self.model.encoder_motion.ELEVATION,
-            focus=self.model.encoder_motion.FOCUS,
-            mask=self.model.encoder_motion.MASK_SELECT,
-            mask_rotation=self.model.encoder_motion.MASK_ROTATE,
+        await asyncio.wait_for(self.in_position(), 20)
+        self.evt_inPosition.set_put(
+            azimuth=self.model.encoder_motion.azimuth,
+            elevation=self.model.encoder_motion.elevation,
+            focus=self.model.encoder_motion.focus,
+            mask=self.model.encoder_motion.mask_select,
+            mask_rotation=self.model.encoder_motion.mask_rotate,
         )
 
     async def telemetry(self):
@@ -131,11 +131,11 @@ class CBPCSC(salobj.ConfigurableCsc):
             )
             self.tel_status.set_put(
                 panic=self.model.panic_status,
-                azimuth=self.model.encoder_status.AZIMUTH,
-                elevation=self.model.encoder_status.ELEVATION,
-                mask=self.model.encoder_status.MASK_SELECT,
-                mask_rotation=self.model.encoder_status.MASK_ROTATE,
-                focus=self.model.encoder_status.FOCUS,
+                azimuth=self.model.encoder_status.azimuth,
+                elevation=self.model.encoder_status.elevation,
+                mask=self.model.encoder_status.mask_select,
+                mask_rotation=self.model.encoder_status.mask_rotate,
+                focus=self.model.encoder_status.focus,
             )
             if self.model.panic_status:
                 self.fault(1, "CBP Panicked. Check hardware and reset device.")
@@ -163,20 +163,20 @@ class CBPCSC(salobj.ConfigurableCsc):
             mask=self.model.mask_target,
             mask_rotation=self.model.mask_rotation_target,
         )
-        self.evt_moving.set_put(
-            azimuth=self.model.encoder_motion.AZIMUTH,
-            elevation=self.model.encoder_motion.ELEVATION,
-            focus=self.model.encoder_motion.FOCUS,
-            mask=self.model.encoder_motion.MASK_SELECT,
-            mask_rotation=self.model.encoder_motion.MASK_ROTATE,
+        self.evt_inPosition.set_put(
+            azimuth=self.model.encoder_motion.azimuth,
+            elevation=self.model.encoder_motion.elevation,
+            focus=self.model.encoder_motion.focus,
+            mask=self.model.encoder_motion.mask_select,
+            mask_rotation=self.model.encoder_motion.mask_rotate,
         )
-        await asyncio.wait_for(self.motion_finished(), 20)
-        self.evt_moving.set_put(
-            azimuth=self.model.encoder_motion.AZIMUTH,
-            elevation=self.model.encoder_motion.ELEVATION,
-            focus=self.model.encoder_motion.FOCUS,
-            mask=self.model.encoder_motion.MASK_SELECT,
-            mask_rotation=self.model.encoder_motion.MASK_ROTATE,
+        await asyncio.wait_for(self.in_position(), 20)
+        self.evt_inPosition.set_put(
+            azimuth=self.model.encoder_motion.azimuth,
+            elevation=self.model.encoder_motion.elevation,
+            focus=self.model.encoder_motion.focus,
+            mask=self.model.encoder_motion.mask_select,
+            mask_rotation=self.model.encoder_motion.mask_rotate,
         )
 
     async def do_park(self, data):
@@ -189,40 +189,40 @@ class CBPCSC(salobj.ConfigurableCsc):
         """
         self.assert_enabled("park")
         await self.model.set_park()
-        self.evt_moving.set_put(
-            azimuth=self.model.encoder_motion.AZIMUTH,
-            elevation=self.model.encoder_motion.ELEVATION,
-            focus=self.model.encoder_motion.FOCUS,
-            mask=self.model.encoder_motion.MASK_SELECT,
-            mask_rotation=self.model.encoder_motion.MASK_ROTATE,
+        self.evt_inPosition.set_put(
+            azimuth=self.model.encoder_motion.azimuth,
+            elevation=self.model.encoder_motion.elevation,
+            focus=self.model.encoder_motion.focus,
+            mask=self.model.encoder_motion.mask_select,
+            mask_rotation=self.model.encoder_motion.mask_rotate,
         )
-        await asyncio.wait_for(self.motion_finished(), 20)
-        self.evt_moving.set_put(
-            azimuth=self.model.encoder_motion.AZIMUTH,
-            elevation=self.model.encoder_motion.ELEVATION,
-            focus=self.model.encoder_motion.FOCUS,
-            mask=self.model.encoder_motion.MASK_SELECT,
-            mask_rotation=self.model.encoder_motion.MASK_ROTATE,
+        await asyncio.wait_for(self.in_position(), 20)
+        self.evt_inPosition.set_put(
+            azimuth=self.model.encoder_motion.azimuth,
+            elevation=self.model.encoder_motion.elevation,
+            focus=self.model.encoder_motion.focus,
+            mask=self.model.encoder_motion.mask_select,
+            mask_rotation=self.model.encoder_motion.mask_rotate,
         )
 
     async def do_unpark(self, data):
         """Unpark the CBP."""
         self.assert_enabled("unpark")
         await self.model.set_unpark()
-        self.evt_moving.set_put(
-            azimuth=self.model.encoder_motion.AZIMUTH,
-            elevation=self.model.encoder_motion.ELEVATION,
-            focus=self.model.encoder_motion.FOCUS,
-            mask=self.model.encoder_motion.MASK_SELECT,
-            mask_rotation=self.model.encoder_motion.MASK_ROTATE,
+        self.evt_inPosition.set_put(
+            azimuth=self.model.encoder_motion.azimuth,
+            elevation=self.model.encoder_motion.elevation,
+            focus=self.model.encoder_motion.focus,
+            mask=self.model.encoder_motion.mask_select,
+            mask_rotation=self.model.encoder_motion.mask_rotate,
         )
-        await asyncio.wait_for(self.motion_finished(), 20)
-        self.evt_moving.set_put(
-            azimuth=self.model.encoder_motion.AZIMUTH,
-            elevation=self.model.encoder_motion.ELEVATION,
-            focus=self.model.encoder_motion.FOCUS,
-            mask=self.model.encoder_motion.MASK_SELECT,
-            mask_rotation=self.model.encoder_motion.MASK_ROTATE,
+        await asyncio.wait_for(self.in_position(), 20)
+        self.evt_inPosition.set_put(
+            azimuth=self.model.encoder_motion.azimuth,
+            elevation=self.model.encoder_motion.elevation,
+            focus=self.model.encoder_motion.focus,
+            mask=self.model.encoder_motion.mask_select,
+            mask_rotation=self.model.encoder_motion.mask_rotate,
         )
 
     async def do_changeMask(self, data):
@@ -246,20 +246,20 @@ class CBPCSC(salobj.ConfigurableCsc):
             mask=self.model.mask_target,
             mask_rotation=self.model.mask_rotation_target,
         )
-        self.evt_moving.set_put(
-            azimuth=self.model.encoder_motion.AZIMUTH,
-            elevation=self.model.encoder_motion.ELEVATION,
-            focus=self.model.encoder_motion.FOCUS,
-            mask=self.model.encoder_motion.MASK_SELECT,
-            mask_rotation=self.model.encoder_motion.MASK_ROTATE,
+        self.evt_inPosition.set_put(
+            azimuth=self.model.encoder_motion.azimuth,
+            elevation=self.model.encoder_motion.elevation,
+            focus=self.model.encoder_motion.focus,
+            mask=self.model.encoder_motion.mask_select,
+            mask_rotation=self.model.encoder_motion.mask_rotate,
         )
-        await asyncio.wait_for(self.motion_finished(), 20)
-        self.evt_moving.set_put(
-            azimuth=self.model.encoder_motion.AZIMUTH,
-            elevation=self.model.encoder_motion.ELEVATION,
-            focus=self.model.encoder_motion.FOCUS,
-            mask=self.model.encoder_motion.MASK_SELECT,
-            mask_rotation=self.model.encoder_motion.MASK_ROTATE,
+        await asyncio.wait_for(self.in_position(), 20)
+        self.evt_inPosition.set_put(
+            azimuth=self.model.encoder_motion.azimuth,
+            elevation=self.model.encoder_motion.elevation,
+            focus=self.model.encoder_motion.focus,
+            mask=self.model.encoder_motion.mask_select,
+            mask_rotation=self.model.encoder_motion.mask_rotate,
         )
 
     async def handle_summary_state(self):
@@ -296,7 +296,7 @@ class CBPCSC(salobj.ConfigurableCsc):
             await self.simulator.stop()
             self.simulator = None
 
-    async def motion_finished(self):
-        while self.model.in_motion:
+    async def in_position(self):
+        while not self.model.in_position:
             await asyncio.sleep(self.heartbeat_interval)
         self.log.info("Motion finished")
