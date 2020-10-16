@@ -86,28 +86,7 @@ class CBPCSC(salobj.ConfigurableCsc):
             self.model.move_elevation(data.elevation),
             self.model.move_azimuth(data.azimuth),
         )
-        self.evt_target.set_put(
-            azimuth=self.model.azimuth_target,
-            elevation=self.model.altitude_target,
-            focus=self.model.focus_target,
-            mask=self.model.mask_target,
-            mask_rotation=self.model.mask_rotation_target,
-        )
-        self.evt_inPosition.set_put(
-            azimuth=self.model.encoder_motion.azimuth,
-            elevation=self.model.encoder_motion.elevation,
-            focus=self.model.encoder_motion.focus,
-            mask=self.model.encoder_motion.mask_select,
-            mask_rotation=self.model.encoder_motion.mask_rotate,
-        )
         await asyncio.wait_for(self.in_position(), 20)
-        self.evt_inPosition.set_put(
-            azimuth=self.model.encoder_motion.azimuth,
-            elevation=self.model.encoder_motion.elevation,
-            focus=self.model.encoder_motion.focus,
-            mask=self.model.encoder_motion.mask_select,
-            mask_rotation=self.model.encoder_motion.mask_rotate,
-        )
 
     async def telemetry(self):
         """Actually updates all of the sal telemetry objects.
@@ -156,28 +135,7 @@ class CBPCSC(salobj.ConfigurableCsc):
         """
         self.assert_enabled("setFocus")
         await self.model.change_focus(data.focus)
-        self.evt_target.set_put(
-            azimuth=self.model.azimuth_target,
-            elevation=self.model.altitude_target,
-            focus=self.model.focus_target,
-            mask=self.model.mask_target,
-            mask_rotation=self.model.mask_rotation_target,
-        )
-        self.evt_inPosition.set_put(
-            azimuth=self.model.encoder_motion.azimuth,
-            elevation=self.model.encoder_motion.elevation,
-            focus=self.model.encoder_motion.focus,
-            mask=self.model.encoder_motion.mask_select,
-            mask_rotation=self.model.encoder_motion.mask_rotate,
-        )
         await asyncio.wait_for(self.in_position(), 20)
-        self.evt_inPosition.set_put(
-            azimuth=self.model.encoder_motion.azimuth,
-            elevation=self.model.encoder_motion.elevation,
-            focus=self.model.encoder_motion.focus,
-            mask=self.model.encoder_motion.mask_select,
-            mask_rotation=self.model.encoder_motion.mask_rotate,
-        )
 
     async def do_park(self, data):
         """Park the CBP.
@@ -189,41 +147,13 @@ class CBPCSC(salobj.ConfigurableCsc):
         """
         self.assert_enabled("park")
         await self.model.set_park()
-        self.evt_inPosition.set_put(
-            azimuth=self.model.encoder_motion.azimuth,
-            elevation=self.model.encoder_motion.elevation,
-            focus=self.model.encoder_motion.focus,
-            mask=self.model.encoder_motion.mask_select,
-            mask_rotation=self.model.encoder_motion.mask_rotate,
-        )
         await asyncio.wait_for(self.in_position(), 20)
-        self.evt_inPosition.set_put(
-            azimuth=self.model.encoder_motion.azimuth,
-            elevation=self.model.encoder_motion.elevation,
-            focus=self.model.encoder_motion.focus,
-            mask=self.model.encoder_motion.mask_select,
-            mask_rotation=self.model.encoder_motion.mask_rotate,
-        )
 
     async def do_unpark(self, data):
         """Unpark the CBP."""
         self.assert_enabled("unpark")
         await self.model.set_unpark()
-        self.evt_inPosition.set_put(
-            azimuth=self.model.encoder_motion.azimuth,
-            elevation=self.model.encoder_motion.elevation,
-            focus=self.model.encoder_motion.focus,
-            mask=self.model.encoder_motion.mask_select,
-            mask_rotation=self.model.encoder_motion.mask_rotate,
-        )
         await asyncio.wait_for(self.in_position(), 20)
-        self.evt_inPosition.set_put(
-            azimuth=self.model.encoder_motion.azimuth,
-            elevation=self.model.encoder_motion.elevation,
-            focus=self.model.encoder_motion.focus,
-            mask=self.model.encoder_motion.mask_select,
-            mask_rotation=self.model.encoder_motion.mask_rotate,
-        )
 
     async def do_changeMask(self, data):
         """Changes the mask.
@@ -239,28 +169,7 @@ class CBPCSC(salobj.ConfigurableCsc):
         """
         self.assert_enabled("changeMask")
         await self.model.set_mask(data.mask)
-        self.evt_target.set_put(
-            azimuth=self.model.azimuth_target,
-            elevation=self.model.altitude_target,
-            focus=self.model.focus_target,
-            mask=self.model.mask_target,
-            mask_rotation=self.model.mask_rotation_target,
-        )
-        self.evt_inPosition.set_put(
-            azimuth=self.model.encoder_motion.azimuth,
-            elevation=self.model.encoder_motion.elevation,
-            focus=self.model.encoder_motion.focus,
-            mask=self.model.encoder_motion.mask_select,
-            mask_rotation=self.model.encoder_motion.mask_rotate,
-        )
         await asyncio.wait_for(self.in_position(), 20)
-        self.evt_inPosition.set_put(
-            azimuth=self.model.encoder_motion.azimuth,
-            elevation=self.model.encoder_motion.elevation,
-            focus=self.model.encoder_motion.focus,
-            mask=self.model.encoder_motion.mask_select,
-            mask_rotation=self.model.encoder_motion.mask_rotate,
-        )
 
     async def handle_summary_state(self):
         if self.disabled_or_enabled:
@@ -297,6 +206,32 @@ class CBPCSC(salobj.ConfigurableCsc):
             self.simulator = None
 
     async def in_position(self):
+        """Wait for CBP to be in position.
+
+        Publish the target event.
+        Publish the inPosition event.
+        Wait for CBP to be in position.
+        Publish the inPosition event.
+        """
+        self.evt_target.set_put(
+            azimuth=self.model.azimuth_target,
+            elevation=self.model.altitude_target,
+            focus=self.model.focus_target,
+            mask=self.model.mask_target,
+            mask_rotation=self.model.mask_rotation_target,
+        )
+        self.publish_in_position()
         while not self.model.in_position:
             await asyncio.sleep(self.heartbeat_interval)
+        self.publish_in_position()
         self.log.info("Motion finished")
+
+    def publish_in_position(self):
+        """Publish inPosition event"""
+        self.evt_inPosition.set_put(
+            azimuth=self.model.encoder_in_position.azimuth,
+            elevation=self.model.encoder_in_position.elevation,
+            focus=self.model.encoder_in_position.focus,
+            mask=self.model.encoder_in_position.mask_select,
+            mask_rotation=self.model.encoder_in_position.mask_rotate,
+        )
