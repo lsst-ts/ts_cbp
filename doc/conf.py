@@ -12,4 +12,5 @@ _g.update(
 )
 
 intersphinx_mapping["ts_xml"] = ("https://ts-xml.lsst.io", None)
-intersphinx_mapping["ts_salobj"] = ("https://ts-salobj.lsst.io", None)
+intersphinx_mapping["salobj"] = ("https://ts-salobj.lsst.io", None)
+intersphinx_mapping["simactuators"] = ("https://ts-simactuators.lsst.io", None)

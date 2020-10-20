@@ -40,9 +40,17 @@ class CBPCSCTestCase(asynctest.TestCase, salobj.BaseCscTestCase):
                 topic=self.remote.evt_inPosition,
                 azimuth=False,
                 elevation=False,
-                mask=False,
-                mask_rotation=False,
-                focus=False,
+                mask=True,
+                mask_rotation=True,
+                focus=True,
+            )
+            await self.assert_next_sample(
+                topic=self.remote.evt_inPosition,
+                azimuth=True,
+                elevation=True,
+                mask=True,
+                mask_rotation=True,
+                focus=True,
             )
             await self.assert_next_sample(
                 topic=self.remote.tel_azimuth, flush=True, azimuth=20
@@ -60,14 +68,6 @@ class CBPCSCTestCase(asynctest.TestCase, salobj.BaseCscTestCase):
 
             with self.subTest("Test moving to the same position."):
                 await self.remote.cmd_move.set_start(azimuth=20, elevation=-50)
-                await self.assert_next_sample(
-                    topic=self.remote.evt_inPosition,
-                    azimuth=True,
-                    elevation=True,
-                    focus=True,
-                    mask=True,
-                    mask_rotation=True,
-                )
 
     async def test_telemetry(self):
         async with self.make_csc(initial_state=salobj.State.ENABLED, simulation_mode=1):
@@ -103,11 +103,19 @@ class CBPCSCTestCase(asynctest.TestCase, salobj.BaseCscTestCase):
             )
             await self.assert_next_sample(
                 topic=self.remote.evt_inPosition,
-                azimuth=False,
-                elevation=False,
-                mask=False,
-                mask_rotation=False,
+                azimuth=True,
+                elevation=True,
+                mask=True,
+                mask_rotation=True,
                 focus=False,
+            )
+            await self.assert_next_sample(
+                topic=self.remote.evt_inPosition,
+                azimuth=True,
+                elevation=True,
+                mask=True,
+                mask_rotation=True,
+                focus=True,
             )
             await self.assert_next_sample(
                 topic=self.remote.tel_focus, flush=True, focus=2500

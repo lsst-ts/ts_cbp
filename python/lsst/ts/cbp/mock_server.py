@@ -1,4 +1,4 @@
-__all__ = ["MockServer"]
+__all__ = ["Encoders", "MockServer"]
 
 import asyncio
 import re
@@ -8,6 +8,17 @@ from lsst.ts import simactuators
 
 
 class Encoders:
+    """Mocks the CBP encoders.
+
+    Attributes
+    ----------
+    AZIMUTH : `lsst.ts.simactuators.PointToPointActuator`
+    ELEVATION : `lsst.ts.simactuators.PointToPointActuator`
+    FOCUS : `lsst.ts.simactuators.PointToPointActuator`
+    MASK_SELECT : `lsst.ts.simactuators.PointToPointActuator`
+    MASK_ROTATE : `lsst.ts.simactuators.CircularPointToPointActuator`
+    """
+
     def __init__(self):
         self.AZIMUTH = simactuators.PointToPointActuator(
             min_position=-45, max_position=45, speed=10, start_position=0
@@ -25,6 +36,32 @@ class Encoders:
 
 
 class MockServer:
+    """Mocks the CBP server.
+
+    Parameters
+    ----------
+    log : `logging.Logger`, optional
+
+    Attributes
+    ----------
+    host : `str`
+    port : `int`
+    timeout : `int`
+    long_timeout : `int`
+    azimuth : `float`
+    altitude : `float`
+    focus : `int`
+    mask : `str`
+    panic_status : `bool`
+    encoders : `Encoders`
+    park : `bool`
+    auto_park : `bool`
+    masks : `dict` of `str`:`float`
+    command_calls : `dict` of `str`:`functools.partial`
+    commands : `list` of `re.Pattern`
+    log : `logging.Logger`
+    """
+
     def __init__(self, log=None):
         self.host = "127.0.0.1"
         self.port = 9999
@@ -78,18 +115,32 @@ class MockServer:
         self.log = logging.getLogger(__name__)
 
     async def start(self):
+        """Start the server."""
         self.log.info("Starting Server")
         self.server = await asyncio.start_server(
             client_connected_cb=self.cmd_loop, host=self.host, port=self.port
         )
 
     async def stop(self):
+        """Stop the server."""
         self.log.info("Closing Server")
         self.server.close()
         await asyncio.wait_for(self.server.wait_closed(), timeout=self.timeout)
         self.log.info("Server closed")
 
     async def cmd_loop(self, reader, writer):
+        """Run the command loop.
+
+        Parameters
+        ----------
+        reader : `asyncio.StreamReader`
+        writer : `asyncio.StreamWriter`
+
+        Raises
+        ------
+        Exception
+            Raised when command is not implemented.
+        """
         while True:
             line = await reader.readuntil(b"\r")
             self.log.info(f"Received: {line}")
@@ -124,41 +175,131 @@ class MockServer:
                         raise Exception("Command is not implemented")
 
     async def do_azimuth(self):
+        """Return azimuth position.
+
+        Returns
+        -------
+        str
+        """
         return f"{self.encoders.AZIMUTH.position()}"
 
     async def do_new_azimuth(self, azimuth):
+        """Set the new azimuth position.
+
+        Parameters
+        ----------
+        azimuth : `float`
+
+        Returns
+        -------
+        str
+        """
         self.encoders.AZIMUTH.set_position(float(azimuth))
         return ""
 
     async def do_altitude(self):
+        """Return the altitude position.
+
+        Returns
+        -------
+        str
+        """
         return f"{self.encoders.ELEVATION.position()}"
 
     async def do_new_altitude(self, altitude):
+        """Set the new altitude position.
+
+        Parameters
+        ----------
+        altitude : `float`
+
+        Returns
+        -------
+        str
+        """
         self.encoders.ELEVATION.set_position(float(altitude))
         return ""
 
     async def do_focus(self):
+        """Return the focus value.
+
+        Returns
+        -------
+        str
+        """
         return f"{int(self.encoders.FOCUS.position())}"
 
     async def do_new_focus(self, focus):
+        """Set the new focus value.
+
+        Parameters
+        ----------
+        focus
+
+        Returns
+        -------
+        str
+        """
         self.encoders.FOCUS.set_position(int(focus))
         return ""
 
     async def do_mask(self):
+        """Return the mask value.
+
+        Returns
+        -------
+        str
+        """
         return f"{self.mask}"
 
     async def do_new_mask(self, mask):
+        """Set the new mask value.
+
+        Parameters
+        ----------
+        mask : `str`
+
+        Returns
+        -------
+        str
+        """
         self.mask = str(mask)
         return ""
 
     async def do_rotation(self):
+        """Return the mask rotation value.
+
+        Returns
+        -------
+        str
+        """
         return f"{self.masks[self.mask]}"
 
     async def do_new_rotation(self, rotation):
-        self.masks[self.mask] = rotation
+        """Set the new mask rotation value.
+
+        Parameters
+        ----------
+        rotation : `float`
+
+        Returns
+        -------
+        str
+        """
+        self.masks[self.mask] = float(rotation)
         return ""
 
     async def do_park(self, park=None):
+        """Park or unpark the CBP.
+
+        Parameters
+        ----------
+        park : `int`, optional
+
+        Returns
+        -------
+        str
+        """
         if park is None:
             self.log.info(f"Park: {self.park}")
             return f"{int(self.park)}"
@@ -169,22 +310,64 @@ class MockServer:
             return ""
 
     async def do_panic(self):
+        """Return the panic status value.
+
+        Returns
+        -------
+        str
+        """
         return f"{int(self.panic_status)}"
 
     async def do_aastat(self):
+        """Return the azimuth encoder status.
+
+        Returns
+        -------
+        str
+        """
         return "0"
 
     async def do_abstat(self):
+        """Return the altitude encoder status.
+
+        Returns
+        -------
+        str
+        """
         return "0"
 
     async def do_acstat(self):
+        """Return the focus encoder status.
+
+        Returns
+        -------
+        str
+        """
         return "0"
 
     async def do_adstat(self):
+        """Return the mask selection encoder status.
+
+        Returns
+        -------
+        str
+        """
         return "0"
 
     async def do_aestat(self):
+        """Return the mask rotation encoder status.
+
+        Returns
+        -------
+        str
+        """
         return "0"
 
     async def do_autopark(self):
+        """Return the autopark value.
+
+        Returns
+        -------
+        str
+        """
         return "0"

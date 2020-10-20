@@ -18,9 +18,7 @@ A link to the SAL API can be found at the top of the :doc:`index </index>`.
 
 The main commands that will likely be used are 
 
-:ref:`ts_xml:CBP:Commands:moveAzimuth`
-
-:ref:`ts_xml:CBP:Commands:moveAltitude`
+:ref:`ts_xml:CBP:Commands:move`
 
 :ref:`ts_xml:CBP:Commands:changeMask`
 
@@ -28,7 +26,7 @@ The relevant telemetry includes
 
 :ref:`ts_xml:CBP:Telemetry:azimuth`
 
-:ref:`ts_xml:CBP:Telemetry:altitude`
+:ref:`ts_xml:CBP:Telemetry:elevation`
 
 :ref:`ts_xml:CBP:Telemetry:mask`
 

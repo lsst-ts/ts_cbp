@@ -10,6 +10,14 @@ class EncoderStatus:
 
     If values are false, then the encoder(s) are fine.
     If the values are true, they are not fine.
+
+    Attributes
+    ----------
+    azimuth : `bool`
+    elevation : `bool`
+    mask_select : `bool`
+    mask_rotate : `bool`
+    focus : `bool`
     """
 
     def __init__(self):
@@ -21,7 +29,16 @@ class EncoderStatus:
 
 
 class ActuatorInPosition:
-    "The motion status of the actuators."
+    """The motion status of the actuators.
+
+    Attributes
+    ----------
+    azimuth : `bool`
+    elevation : `bool`
+    mask_select : `bool`
+    mask_rotate : `bool`
+    focus : `bool`
+    """
 
     def __init__(self):
         self.azimuth = False
@@ -42,51 +59,31 @@ class CBPComponent:
     Attributes
     ----------
     log : `logging.Logger`
-        The logger for the component
-
-    socket : `socket.Socket`
-        The socket that handles the TCP/IP connection for the CBP
-
-    altitude : `float`
-        The value of the CBP altitude encoder in degrees.
-
-    azimuth : `float`
-        The value of the CBP azimuth encoder in degrees.
-
-    mask : `str`
-        The current mask name
-
-    mask_rotation : `float`
-        The current value of the mask rotation encoder in degrees.
-
-    masks : `SimpleNamespace`
-        A simplenamespace that contains the mask names and rotation values and
-        id.
-
-    focus : `float`
-        The current value of the focus encoder in microns.
-
-    panic_status : `float`
-        The current value of the panic variable in the CBP dmc code.
-        A non-zero value represents a panic state and causes the motors to
-        cease functioning until panic is dealt with or goes away.
-        This status is set by the values of the other statuses.
-
-    auto_park : `float`
-        The current value of the auto_park variable.
-        If this value is one, that means that CBP suffered a power loss that
-        lasted more than 12 seconds and was on battery back up.
-        The CBP will then park itself automatically, moving azimuth to 0 and
-        altitude to -70 and locking focus and mask.
-        To un-park CBP, the park variable should be set to zero.
-
-    park : `float`
-        The current value of the park variable.
-        This value can be set to one or zero, if set to one it will park the
-        CBP if set to zero it will un-park.
-
-    encoder_status : `Status`
-        A flag enum that contains the status information for each encoder.
+    reader : `asyncio.StreamReader`
+    writer : `asyncio.StreamWriter`
+    lock : `asyncio.Lock`
+    timeout : `int`
+    long_timeout : `int`
+    altitude : `None` or `float`
+    azimuth : `None` or `float`
+    mask : `None` or `str`
+    mask_rotation : `None` or `float`
+    focus : `None` or `int`
+    altitude_target : `float`
+    azimuth_target : float`
+    mask_target : `str`
+    mask_rotation_target : `float`
+    focus_target : `int`
+    host : `str`
+    port : `int`
+    panic_status : `None` or `bool`
+    auto_park : `None` or `bool`
+    park : `None` or `bool`
+    simulation_mode : `int`
+    encoder_status : `EncoderStatus`
+    encoder_in_position : `ActuatorInPosition`
+    connected : `bool`
+    error_tolerance : `float`
 
     Notes
     -----
@@ -104,7 +101,7 @@ class CBPComponent:
         self.timeout = 5
         self.long_timeout = 30
 
-        self.altitude = None
+        self.elevation = None
         self.azimuth = None
         self.mask = None
         self.mask_rotation = None
@@ -131,7 +128,7 @@ class CBPComponent:
         self.log.info("CBP component initialized")
 
     def generate_mask_info(self):
-        """Generates initial mask info."""
+        """Generate initial mask info."""
         mask_dict = {
             f"{i}": types.SimpleNamespace(name=f"Empty {i}", rotation=0, id=i)
             for i in (1, 2, 3, 4, 5, 9)
@@ -140,6 +137,7 @@ class CBPComponent:
         self.masks = types.SimpleNamespace(**mask_dict)
 
     def get_in_position_status(self):
+        """Get the in position status of each actuator."""
         self.encoder_in_position.azimuth = (
             abs(self.azimuth - self.azimuth_target) < self.error_tolerance
         )
@@ -169,6 +167,11 @@ class CBPComponent:
         ----------
         msg : `str`
             The string command to be sent.
+
+        Returns
+        -------
+        reply : `str`
+            The reply to the command sent.
         """
         async with self.lock:
             msg = msg + "\r"
@@ -185,12 +188,6 @@ class CBPComponent:
         """Create a socket and connect to the CBP's static address and
         designated port.
 
-
-        Returns
-        -------
-        None
-            Nothing
-
         """
         async with self.lock:
             connect_task = asyncio.open_connection(host=self.host, port=self.port)
@@ -202,7 +199,7 @@ class CBPComponent:
     async def disconnect(self):
         """Disconnect from the tcp socket.
 
-        Safe to call even if already disconnected
+        Safe to call even if already disconnected.
         """
         async with self.lock:
             self.reader = None
@@ -217,25 +214,22 @@ class CBPComponent:
                     self.connected = False
 
     async def get_azimuth(self):
-        """Get azimuth value from azimuth encoder which is in degrees.
-
-        Returns
-        -------
-        None
+        """Get the azimuth value.
         """
         self.azimuth = float(await self.send_command("az=?"))
 
     async def move_azimuth(self, position: float):
-        """This moves the horizontal axis to the value sent by the user.
+        """Move the azimuth encoder.
 
         Parameters
         ----------
-        position: float
+        position : `float`
             The desired azimuth (degrees).
 
-        Returns
-        -------
-        None
+        Raises
+        ------
+        ValueError
+            Raised when the new value falls outside the accepted range.
 
         """
         if position < -45 or position > 45:
@@ -249,24 +243,21 @@ class CBPComponent:
 
         Note that the low-level controller calls this axis "altitude".
 
-        Returns
-        -------
-        None
-
         """
         self.elevation = float(await self.send_command("alt=?"))
 
     async def move_elevation(self, position: float):
-        """This moves the vertical axis to the value that the user sent.
+        """Move the elevation encoder.
 
         Parameters
         ----------
-        position: float
+        position : `float`
             The desired elevation (degrees)
 
-        Returns
-        -------
-        None
+        Raises
+        ------
+        ValueError
+            Raised when the new value falls outside the accepted range.
 
         """
         if position < -69 or position > 45:
@@ -276,27 +267,23 @@ class CBPComponent:
             await self.send_command(f"new_alt={position}")
 
     async def get_focus(self):
-        """This gets the value of the focus encoder. Units: microns
-
-        Returns
-        -------
-        None
+        """Get the focus value.
 
         """
         self.focus = int(await self.send_command("foc=?"))
 
     async def change_focus(self, position: int):
-        """This changes the focus to whatever value the user sent.
+        """Change focus.
 
         Parameters
         ----------
-        position: int
-            The value of the new focus in microns.
+        position : `int`
+            The value of the new focus (microns).
 
-        Returns
-        -------
-        None
-
+        Raises
+        ------
+        ValueError
+            Raised when the new value falls outside the accepted range.
         """
         if position < 0 or position > 13000:
             raise ValueError("New focus value exceeds focus limit.")
@@ -305,12 +292,7 @@ class CBPComponent:
             await self.send_command(f"new_foc={int(position)}")
 
     async def get_mask(self):
-        """This gets the current mask value from the encoder which is converted
-        into the name of the mask.
-
-        Returns
-        -------
-        None
+        """Get mask value.
 
         """
         # If mask encoder is off then it will return "9.0" which is unknown
@@ -319,17 +301,18 @@ class CBPComponent:
         self.mask = self.masks.__dict__.get(mask).name
 
     async def set_mask(self, mask: str):
-        """This sets the mask value
+        """Set the mask value
 
         Parameters
         ----------
-        mask: str
+        mask : `str`
             This is the name of the mask which is converted to an int using a
             dictionary.
 
-        Returns
-        -------
-        None
+        Raises
+        ------
+        KeyError
+            Raised when new mask is not a key in the dictionary.
 
         """
         self.mask_target = self.masks.__dict__.get(mask).name
@@ -337,27 +320,24 @@ class CBPComponent:
         await self.send_command(f"new_msk={self.masks.__dict__.get(mask).id}")
 
     async def get_mask_rotation(self):
-        """This gets the mask rotation value from the encoder which is in
-        degrees.
-
-        Returns
-        -------
-        None
+        """Get the mask rotation value.
 
         """
         self.mask_rotation = float(await self.send_command("rot=?"))
 
     async def set_mask_rotation(self, mask_rotation: float):
-        """This sets the mask rotation
+        """Set the mask rotation
 
         Parameters
         ----------
-        mask_rotation: float
+        mask_rotation : `float`
             The mask_rotation value that will be sent.
 
-        Returns
-        -------
-        None
+
+        Raises
+        ------
+        ValueError
+            Raised when the new value falls outside the accepted range.
 
         """
         if mask_rotation < 0 or mask_rotation > 360:
@@ -366,45 +346,27 @@ class CBPComponent:
         await self.send_command(f"new_rot={mask_rotation}")
 
     async def check_panic_status(self):
-        """Gets the panic variable from CBP
-
-        Returns
-        -------
-        None
+        """Get the panic variable from CBP.
 
         """
         self.panic_status = bool(int(await self.send_command("wdpanic=?")))
 
     async def check_auto_park(self):
-        """Gets the autopark variable from CBP
-
-        Returns
-        -------
-        None
-
+        """Get the autopark variable from CBP
         """
         self.auto_park = bool(int(await self.send_command("autopark=?")))
 
     async def check_park(self):
-        """Gets the park variable from CBP
-
-        Returns
-        -------
-        None
+        """Get the park variable from CBP.
 
         """
         self.park = bool(int(await self.send_command("park=?")))
         self.log.info(f"Park: {self.park}")
 
     async def set_park(self):
-        """Park the CBP
-
-        Returns
-        -------
-        None
-
+        """Park the CBP.
         """
-        await self.send_command(f"park=1")
+        await self.send_command("park=1")
 
     async def set_unpark(self):
         """Unpark the CBP."""
@@ -412,10 +374,6 @@ class CBPComponent:
 
     async def check_cbp_status(self):
         """Read and record the status of the encoders.
-
-        Returns
-        -------
-        None
 
         """
         self.encoder_status.azimuth = bool(int(await self.send_command("AAstat=?")))
@@ -425,11 +383,7 @@ class CBPComponent:
         self.encoder_status.focus = bool(int(await self.send_command("AEstat=?")))
 
     async def get_cbp_telemetry(self):
-        """Gets the position data of the CBP.
-
-        Returns
-        -------
-        None
+        """Get the position data of the CBP.
 
         """
         await self.get_elevation()
@@ -439,6 +393,12 @@ class CBPComponent:
         await self.get_mask_rotation()
 
     def configure(self, config):
+        """Configure the CBP.
+
+        Parameters
+        ----------
+        config : `types.SimpleNamespace`
+        """
         self.host = config.address
         self.port = config.port
         self.masks.__dict__.get("1").name = config.mask1["name"]
@@ -452,12 +412,8 @@ class CBPComponent:
         self.masks.__dict__.get("5").name = config.mask5["name"]
         self.masks.__dict__.get("5").rotation = config.mask5["rotation"]
 
-    async def publish(self):
-        """This updates the attributes within the component.
-
-        Returns
-        -------
-        None
+    async def update_status(self):
+        """Update the status.
 
         """
         await self.check_panic_status()
@@ -468,4 +424,10 @@ class CBPComponent:
         self.get_in_position_status()
 
     def set_simulation_mode(self, simulation_mode):
+        """Set the simulation mode.
+
+        Parameters
+        ----------
+        simulation_mode : `int`
+        """
         self.simulation_mode = simulation_mode
