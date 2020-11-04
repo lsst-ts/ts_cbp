@@ -47,6 +47,14 @@ class CBPCSCTestCase(asynctest.TestCase, salobj.BaseCscTestCase):
             await self.assert_next_sample(
                 topic=self.remote.evt_inPosition,
                 azimuth=True,
+                elevation=False,
+                mask=True,
+                mask_rotation=True,
+                focus=True,
+            )
+            await self.assert_next_sample(
+                topic=self.remote.evt_inPosition,
+                azimuth=True,
                 elevation=True,
                 mask=True,
                 mask_rotation=True,
@@ -68,6 +76,49 @@ class CBPCSCTestCase(asynctest.TestCase, salobj.BaseCscTestCase):
 
             with self.subTest("Test moving to the same position."):
                 await self.remote.cmd_move.set_start(azimuth=20, elevation=-50)
+                await self.assert_next_sample(
+                    topic=self.remote.evt_inPosition,
+                    azimuth=False,
+                    elevation=False,
+                    mask=True,
+                    mask_rotation=True,
+                    focus=True,
+                )
+                await self.assert_next_sample(
+                    topic=self.remote.evt_inPosition,
+                    azimuth=True,
+                    elevation=True,
+                    mask=True,
+                    mask_rotation=True,
+                    focus=True,
+                )
+
+            with self.subTest("Test moving very minute position"):
+                await self.remote.cmd_move.set_start(azimuth=19, elevation=-50)
+                await self.assert_next_sample(
+                    topic=self.remote.evt_inPosition,
+                    azimuth=False,
+                    elevation=False,
+                    mask=True,
+                    mask_rotation=True,
+                    focus=True,
+                )
+                await self.assert_next_sample(
+                    topic=self.remote.evt_inPosition,
+                    azimuth=False,
+                    elevation=True,
+                    mask=True,
+                    mask_rotation=True,
+                    focus=True,
+                )
+                await self.assert_next_sample(
+                    topic=self.remote.evt_inPosition,
+                    azimuth=True,
+                    elevation=True,
+                    mask=True,
+                    mask_rotation=True,
+                    focus=True,
+                )
 
     async def test_telemetry(self):
         async with self.make_csc(initial_state=salobj.State.ENABLED, simulation_mode=1):

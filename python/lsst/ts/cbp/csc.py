@@ -43,9 +43,10 @@ class CBPCSC(salobj.ConfigurableCsc):
             simulation_mode=simulation_mode,
             schema_path=schema_path,
         )
-        self.component = component.CBPComponent()
+        self.component = component.CBPComponent(self)
         self.simulator = None
         self.telemetry_task = salobj.make_done_future()
+        self.telemetry_time = 0.05
         self.log.info("CBP CSC initialized")
 
     async def do_move(self, data):
@@ -91,7 +92,7 @@ class CBPCSC(salobj.ConfigurableCsc):
             if self.component.panic_status:
                 self.fault(1, "CBP Panicked. Check hardware and reset device.")
 
-            await asyncio.sleep(self.heartbeat_interval)
+            await asyncio.sleep(self.telemetry_time)
 
     async def do_setFocus(self, data):
         """Sets the focus.
@@ -186,9 +187,7 @@ class CBPCSC(salobj.ConfigurableCsc):
         """Wait for CBP to be in position.
 
         * Publish the target event.
-        * Publish the inPosition event.
         * Wait for CBP to be in position.
-        * Publish the inPosition event.
         """
         self.evt_target.set_put(
             azimuth=self.component.azimuth_target,
@@ -197,15 +196,12 @@ class CBPCSC(salobj.ConfigurableCsc):
             mask=self.component.mask_target,
             mask_rotation=self.component.mask_rotation_target,
         )
-        await self.publish_in_position()
         while not self.component.in_position:
-            await asyncio.sleep(self.heartbeat_interval)
-        await self.publish_in_position()
+            await asyncio.sleep(self.telemetry_time)
         self.log.info("Motion finished")
 
-    async def publish_in_position(self):
+    def publish_in_position(self):
         """Publish inPosition event"""
-        await self.component.update_status()
         self.evt_inPosition.set_put(
             azimuth=self.component.encoder_in_position.azimuth,
             elevation=self.component.encoder_in_position.elevation,

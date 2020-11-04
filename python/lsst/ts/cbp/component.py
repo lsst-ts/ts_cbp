@@ -56,8 +56,14 @@ class CBPComponent:
     The following api exposes commands that move the motors of the CBP, sets
     the focus and selects the mask.
 
+    Parameters
+    ----------
+    csc : `CBPCSC`
+        The running CSC for the CBP.
+
     Attributes
     ----------
+    csc : `CBPCSC`
     log : `logging.Logger`
     reader : `asyncio.StreamReader`
     writer : `asyncio.StreamWriter`
@@ -70,7 +76,7 @@ class CBPComponent:
     mask_rotation : `None` or `float`
     focus : `None` or `int`
     altitude_target : `float`
-    azimuth_target : float`
+    azimuth_target : `float`
     mask_target : `str`
     mask_rotation_target : `float`
     focus_target : `int`
@@ -93,7 +99,8 @@ class CBPComponent:
     The underlying api is built on :term:`DMC`.
     """
 
-    def __init__(self):
+    def __init__(self, csc):
+        self.csc = csc
         self.log = logging.getLogger(__name__)
         self.reader = None
         self.writer = None
@@ -107,10 +114,10 @@ class CBPComponent:
         self.mask_rotation = None
         self.focus = None
 
-        self.altitude_target = 0
-        self.azimuth_target = 0
+        self.altitude_target = 0.0
+        self.azimuth_target = 0.0
         self.mask_target = "Mask 1"
-        self.mask_rotation_target = 0
+        self.mask_rotation_target = 0.0
         self.focus_target = 0
 
         self.host = None
@@ -136,21 +143,53 @@ class CBPComponent:
         mask_dict["9"].name = "Unknown"
         self.masks = types.SimpleNamespace(**mask_dict)
 
-    def get_in_position_status(self):
-        """Get the in position status of each actuator."""
-        self.encoder_in_position.azimuth = (
+    def get_in_position_status(self, changed=True, move_commanded=[]):
+        """Get the in position status of each actuator.
+
+        Also calls a method to publish the inPosition event if the status of
+        any actuator has changed since the previous call.
+        """
+        changed = changed
+        azimuth_in_position = (
             abs(self.azimuth - self.azimuth_target) < self.error_tolerance
         )
-        self.encoder_in_position.elevation = (
+        elevation_in_position = (
             abs(self.elevation - self.altitude_target) < self.error_tolerance
         )
-        self.encoder_in_position.mask_select = self.mask == self.mask_target
-        self.encoder_in_position.mask_rotate = (
+        mask_select_in_position = self.mask == self.mask_target
+        mask_rotation_in_position = (
             abs(self.mask_rotation - self.mask_rotation_target) < self.error_tolerance
         )
-        self.encoder_in_position.focus = (
-            abs(self.focus - self.focus_target) < self.error_tolerance
-        )
+        focus_in_position = abs(self.focus - self.focus_target) < self.error_tolerance
+        if (
+            azimuth_in_position is self.encoder_in_position.azimuth
+            and elevation_in_position is self.encoder_in_position.elevation
+            and mask_select_in_position is self.encoder_in_position.mask_select
+            and mask_rotation_in_position is self.encoder_in_position.mask_rotate
+            and focus_in_position is self.encoder_in_position.focus
+        ):
+            changed = False
+
+        for item in move_commanded:
+            if item == "azimuth":
+                azimuth_in_position = False
+                changed = True
+            elif item == "elevation":
+                elevation_in_position = False
+                changed = True
+            elif item == "focus":
+                focus_in_position = False
+                changed = True
+            elif item == "mask rotation":
+                mask_rotation_in_position = False
+                changed = True
+
+        self.log.info(changed)
+        self.encoder_in_position.azimuth = azimuth_in_position
+        self.encoder_in_position.elevation = elevation_in_position
+        self.encoder_in_position.mask_select = mask_select_in_position
+        self.encoder_in_position.mask_rotate = mask_rotation_in_position
+        self.encoder_in_position.focus = focus_in_position
         self.in_position = (
             self.encoder_in_position.azimuth
             and self.encoder_in_position.elevation
@@ -158,7 +197,9 @@ class CBPComponent:
             and self.encoder_in_position.mask_rotate
             and self.encoder_in_position.focus
         )
-        self.log.info(f"In position:{self.in_position}")
+        if changed:
+            self.csc.publish_in_position()
+        self.log.debug(f"In position:{self.in_position}")
 
     async def send_command(self, msg):
         """Send the encoded command and read the reply.
@@ -237,6 +278,8 @@ class CBPComponent:
         else:
             self.azimuth_target = position
             await self.send_command(f"new_az={position}")
+            await self.get_cbp_telemetry()
+            self.get_in_position_status(move_commanded=["azimuth", "elevation"])
 
     async def get_elevation(self):
         """Read and record the mount elevation encoder, in degrees.
@@ -265,6 +308,8 @@ class CBPComponent:
         else:
             self.altitude_target = position
             await self.send_command(f"new_alt={position}")
+            await self.get_cbp_telemetry()
+            self.get_in_position_status(move_commanded=["elevation", "azimuth"])
 
     async def get_focus(self):
         """Get the focus value.
@@ -290,6 +335,8 @@ class CBPComponent:
         else:
             self.focus_target = int(position)
             await self.send_command(f"new_foc={int(position)}")
+            await self.get_cbp_telemetry()
+            self.get_in_position_status(move_commanded=["focus"])
 
     async def get_mask(self):
         """Get mask value.
@@ -344,6 +391,8 @@ class CBPComponent:
             raise ValueError("New mask rotation value exceeds mask rotation limits.")
         self.mask_rotation_target = mask_rotation
         await self.send_command(f"new_rot={mask_rotation}")
+        await self.get_cbp_telemetry()
+        self.get_in_position_status(move_commanded=["mask rotation"])
 
     async def check_panic_status(self):
         """Get the panic variable from CBP.

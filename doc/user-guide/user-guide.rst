@@ -22,7 +22,13 @@ The main commands that will likely be used are
 
 :ref:`ts_xml:CBP:Commands:changeMask`
 
-The relevant telemetry includes
+The relevant events include
+
+:ref:`ts_xml:CBP:Events:target`
+
+:ref:`ts_xml:CBP:Events:inPosition`
+
+The relevant telemetry include
 
 :ref:`ts_xml:CBP:Telemetry:azimuth`
 
@@ -79,6 +85,13 @@ Getting telemetry from the CBP
 
     azimuth = await cbp.tel_azimuth.aget(timeout=2)
     altitude = await cbp.tel_altitude.aget(timeout=2)
+
+Getting events from the CBP
+
+.. code::
+
+    target = await cbp.evt_target.aget(timeout=2)
+    in_position = await cbp.evt_inPosition.aget(timeout=2)
 
 Clean up
 

@@ -143,24 +143,24 @@ class MockServer:
         """
         while True:
             line = await reader.readuntil(b"\r")
-            self.log.info(f"Received: {line}")
+            self.log.debug(f"Received: {line}")
             if not line:
                 writer.close()
                 return
             line = line.decode().strip("\r")
-            self.log.info(f"Decoded {line}")
+            self.log.debug(f"Decoded {line}")
             for command in self.commands:
                 matched_command = command.match(line)
-                self.log.info(f"{matched_command}")
+                self.log.debug(f"{matched_command}")
                 if matched_command:
                     command_group = matched_command.group("cmd")
-                    self.log.info(f"Matched {command_group}")
+                    self.log.debug(f"Matched {command_group}")
                     if command_group in self.command_calls:
                         self.log.info(f"{command_group}")
                         called_command = self.command_calls[command_group]
                         try:
                             parameter = matched_command.group("parameter")
-                            self.log.info(f"{parameter}")
+                            self.log.debug(f"{parameter}")
                         except IndexError:
                             parameter = None
                         if parameter is None:
@@ -169,7 +169,7 @@ class MockServer:
                             msg = await called_command(parameter) + "\r"
                         msg = msg.encode("ascii")
                         writer.write(msg)
-                        self.log.info(f"Wrote {msg}")
+                        self.log.debug(f"Wrote {msg}")
                         await writer.drain()
                     else:
                         raise Exception("Command is not implemented")
