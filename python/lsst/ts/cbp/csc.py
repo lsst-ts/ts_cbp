@@ -12,8 +12,18 @@ class CBPCSC(salobj.ConfigurableCsc):
     Parameters
     ----------
     simulation_mode : `int`, optional
+        Supported simulation mode values
+
+        * 0: normal operation
+        * 1: mock controller
     initial_state : `lsst.ts.salobj.State`, optional
+        Initial state is meant for unit tests, defaults to
+        `lsst.ts.salobj.State.STANDBY`
     config_dir : `None` or `str` or `pathlib.Path`, optional
+        Meant for unit tests.
+        Tells the CSC where to look for the configuration files.
+        Normal operation will always be in a configuration repository returned
+        `get_config_dir`.
 
     Attributes
     ----------
@@ -46,7 +56,7 @@ class CBPCSC(salobj.ConfigurableCsc):
         self.component = component.CBPComponent(self)
         self.simulator = None
         self.telemetry_task = salobj.make_done_future()
-        self.telemetry_time = 0.05
+        self.telemetry_time = 0.5
         self.log.info("CBP CSC initialized")
 
     async def do_move(self, data):
@@ -72,24 +82,7 @@ class CBPCSC(salobj.ConfigurableCsc):
         while True:
             self.log.debug("Begin sending telemetry")
             await self.component.update_status()
-            self.tel_azimuth.set_put(azimuth=self.component.azimuth)
-            self.tel_elevation.set_put(elevation=self.component.elevation)
-            self.tel_focus.set_put(focus=self.component.focus)
-            self.tel_mask.set_put(
-                mask=self.component.mask, mask_rotation=self.component.mask_rotation
-            )
-            self.tel_parked.set_put(
-                autoparked=self.component.auto_park, parked=self.component.park
-            )
-            self.tel_status.set_put(
-                panic=self.component.panic_status,
-                azimuth=self.component.encoder_status.azimuth,
-                elevation=self.component.encoder_status.elevation,
-                mask=self.component.encoder_status.mask_select,
-                mask_rotation=self.component.encoder_status.mask_rotate,
-                focus=self.component.encoder_status.focus,
-            )
-            if self.component.panic_status:
+            if self.component.status.panic:
                 self.fault(1, "CBP Panicked. Check hardware and reset device.")
 
             await asyncio.sleep(self.telemetry_time)
@@ -151,7 +144,8 @@ class CBPCSC(salobj.ConfigurableCsc):
                 self.telemetry_task = asyncio.create_task(self.telemetry())
             if self.component.connected is False:
                 await self.component.connect()
-            if self.component.park is True:
+                await self.initialize_target()
+            if self.component.parked is True:
                 await self.component.set_unpark()
         else:
             if self.simulator is not None:
@@ -186,26 +180,28 @@ class CBPCSC(salobj.ConfigurableCsc):
     async def in_position(self):
         """Wait for CBP to be in position.
 
-        * Publish the target event.
         * Wait for CBP to be in position.
         """
-        self.evt_target.set_put(
-            azimuth=self.component.azimuth_target,
-            elevation=self.component.altitude_target,
-            focus=self.component.focus_target,
-            mask=self.component.mask_target,
-            mask_rotation=self.component.mask_rotation_target,
-        )
-        while not self.component.in_position:
+        while not self.position:
             await asyncio.sleep(self.telemetry_time)
         self.log.info("Motion finished")
 
-    def publish_in_position(self):
-        """Publish inPosition event"""
-        self.evt_inPosition.set_put(
-            azimuth=self.component.encoder_in_position.azimuth,
-            elevation=self.component.encoder_in_position.elevation,
-            focus=self.component.encoder_in_position.focus,
-            mask=self.component.encoder_in_position.mask_select,
-            mask_rotation=self.component.encoder_in_position.mask_rotate,
+    def position(self):
+        """Is the CBP in position."""
+        return (
+            self.component.in_position.azimuth
+            and self.component.in_position.elevation
+            and self.component.in_position.focus
+            and self.component.in_position.mask_rotate
         )
+
+    async def initialize_target(self):
+        await self.component.get_cbp_telemetry()
+        self.evt_target.set_put(
+            azimuth=self.component.azimuth,
+            elevation=self.component.elevation,
+            focus=self.component.focus,
+            mask=self.component.mask,
+            mask_rotation=self.component.mask_rotation,
+        )
+        self.component.update_in_position()
