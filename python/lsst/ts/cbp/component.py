@@ -29,7 +29,6 @@ class CBPComponent:
     long_timeout : `int`
     host : `str`
     port : `int`
-    simulation_mode : `int`
     connected : `bool`
     error_tolerance : `float`
 
@@ -52,9 +51,8 @@ class CBPComponent:
 
         self.host = None
         self.port = None
-        self.simulation_mode = 0
         self.connected = False
-        # FIXME separate error tolerances for each encoder
+        # FIXME DM-27602 separate error tolerances for each encoder
         self.error_tolerance = 0.3
         self.generate_mask_info()
         self.log.info("CBP component initialized")
@@ -116,7 +114,7 @@ class CBPComponent:
             for i in (1, 2, 3, 4, 5, 9)
         }
         mask_dict["9"].name = "Unknown"
-        self.masks = types.SimpleNamespace(**mask_dict)
+        self.masks = mask_dict
 
     def update_in_position(self):
         """Update the in position status of each actuator,
@@ -196,6 +194,8 @@ class CBPComponent:
         """Get the azimuth value.
         """
         azimuth = float(await self.send_command("az=?"))
+        if not self.csc.tel_azimuth.has_data:
+            self.csc.evt_target.set_put(azimuth=azimuth)
         self.csc.tel_azimuth.set_put(azimuth=azimuth)
 
     async def move_azimuth(self, position: float):
@@ -213,7 +213,9 @@ class CBPComponent:
 
         """
         if position < -45 or position > 45:
-            raise ValueError("New azimuth value exceeds Azimuth limit.")
+            raise ValueError(
+                f"New azimuth value {position:0.2f} exceeds Azimuth limit [-45, 45]."
+            )
         else:
             self.csc.evt_target.set_put(azimuth=position)
             await self.send_command(f"new_az={position}")
@@ -226,6 +228,8 @@ class CBPComponent:
 
         """
         elevation = float(await self.send_command("alt=?"))
+        if not self.csc.tel_elevation.has_data:
+            self.csc.evt_target.set_put(elevation=elevation)
         self.csc.tel_elevation.set_put(elevation=elevation)
 
     async def move_elevation(self, position: float):
@@ -243,7 +247,9 @@ class CBPComponent:
 
         """
         if position < -69 or position > 45:
-            raise ValueError("New altitude value exceeds altitude limit.")
+            raise ValueError(
+                f"New altitude value {position:0.2f} exceeds altitude limit [-69, 45]."
+            )
         else:
             self.csc.evt_target.set_put(elevation=position)
             await self.send_command(f"new_alt={position}")
@@ -254,6 +260,8 @@ class CBPComponent:
 
         """
         focus = int(await self.send_command("foc=?"))
+        if not self.csc.tel_focus.has_data:
+            self.csc.evt_target.set_put(focus=focus)
         self.csc.tel_focus.set_put(focus=focus)
 
     async def change_focus(self, position: int):
@@ -270,7 +278,9 @@ class CBPComponent:
             Raised when the new value falls outside the accepted range.
         """
         if position < 0 or position > 13000:
-            raise ValueError("New focus value exceeds focus limit.")
+            raise ValueError(
+                f"New focus value {position} exceeds focus limit [0, 13000]."
+            )
         else:
             self.csc.evt_target.set_put(focus=int(position))
             await self.send_command(f"new_foc={int(position)}")
@@ -283,8 +293,10 @@ class CBPComponent:
         # If mask encoder is off then it will return "9.0" which is unknown
         # mask
         mask = str(int(float(await self.send_command("msk=?"))))
-        mask = self.masks.__dict__.get(mask).name
+        mask = self.masks.get(mask).name
         mask_rotation = float(await self.send_command("rot=?"))
+        if not self.csc.tel_mask.has_data:
+            self.csc.evt_target.set_put(mask=mask, mask_rotation=mask_rotation)
         self.csc.tel_mask.set_put(mask=mask, mask_rotation=mask_rotation)
 
     async def set_mask(self, mask: str):
@@ -302,8 +314,8 @@ class CBPComponent:
             Raised when new mask is not a key in the dictionary.
 
         """
-        self.csc.evt_target.set_put(mask=self.masks.__dict__.get(mask).name)
-        await self.send_command(f"new_msk={self.masks.__dict__.get(mask).id}")
+        self.csc.evt_target.set_put(mask=self.masks.get(mask).name)
+        await self.send_command(f"new_msk={self.masks.get(mask).id}")
 
     async def set_mask_rotation(self, mask_rotation: float):
         """Set the mask rotation
@@ -321,7 +333,9 @@ class CBPComponent:
 
         """
         if mask_rotation < 0 or mask_rotation > 360:
-            raise ValueError("New mask rotation value exceeds mask rotation limits.")
+            raise ValueError(
+                f"New mask rotation value {mask_rotation:0.2f} exceeds limits [0, 360]."
+            )
         self.csc.evt_target.set_put(mask_rotation=mask_rotation)
         await self.send_command(f"new_rot={mask_rotation}")
         self.csc.evt_inPosition.set_put(mask_rotation=False)
@@ -338,10 +352,12 @@ class CBPComponent:
         """Park the CBP.
         """
         await self.send_command("park=1")
+        await self.check_park()
 
     async def set_unpark(self):
         """Unpark the CBP."""
         await self.send_command("park=0")
+        await self.check_park()
 
     async def check_cbp_status(self):
         """Read and record the status of the encoders.
@@ -380,16 +396,16 @@ class CBPComponent:
         """
         self.host = config.address
         self.port = config.port
-        self.masks.__dict__.get("1").name = config.mask1["name"]
-        self.masks.__dict__.get("1").rotation = config.mask1["rotation"]
-        self.masks.__dict__.get("2").name = config.mask2["name"]
-        self.masks.__dict__.get("2").rotation = config.mask2["rotation"]
-        self.masks.__dict__.get("3").name = config.mask3["name"]
-        self.masks.__dict__.get("3").rotation = config.mask3["rotation"]
-        self.masks.__dict__.get("4").name = config.mask4["name"]
-        self.masks.__dict__.get("4").rotation = config.mask4["rotation"]
-        self.masks.__dict__.get("5").name = config.mask5["name"]
-        self.masks.__dict__.get("5").rotation = config.mask5["rotation"]
+        self.masks.get("1").name = config.mask1["name"]
+        self.masks.get("1").rotation = config.mask1["rotation"]
+        self.masks.get("2").name = config.mask2["name"]
+        self.masks.get("2").rotation = config.mask2["rotation"]
+        self.masks.get("3").name = config.mask3["name"]
+        self.masks.get("3").rotation = config.mask3["rotation"]
+        self.masks.get("4").name = config.mask4["name"]
+        self.masks.get("4").rotation = config.mask4["rotation"]
+        self.masks.get("5").name = config.mask5["name"]
+        self.masks.get("5").rotation = config.mask5["rotation"]
 
     async def update_status(self):
         """Update the status.
@@ -399,12 +415,3 @@ class CBPComponent:
         await self.check_park()
         await self.get_cbp_telemetry()
         self.update_in_position()
-
-    def set_simulation_mode(self, simulation_mode):
-        """Set the simulation mode.
-
-        Parameters
-        ----------
-        simulation_mode : `int`
-        """
-        self.simulation_mode = simulation_mode

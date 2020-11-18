@@ -15,8 +15,8 @@ The CBP software consists of a typical salobj CSC, a firmware written in DMC and
 Dependencies
 ============
 
-* `SAL <https://ts-sal.lsst.io>`_ - v4.0.0
-* `ts_salobj <https://ts-salobj.lsst.io>`_ - v6.x.0
+* `SAL <https://ts-sal.lsst.io>`_ - v5
+* `ts_salobj <https://ts-salobj.lsst.io>`_ - v6.x
 
 .. _developer-guide:developer-guide:api:
 

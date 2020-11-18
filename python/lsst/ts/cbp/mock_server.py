@@ -70,49 +70,42 @@ class MockServer:
         self.azimuth = 0
         self.altitude = 0
         self.focus = 0
-        self.mask = "1"
+        self.mask = 1
         self.panic_status = False
         self.encoders = Encoders()
         self.park = False
         self.auto_park = False
-        self.masks = {"1": 0, "2": 0, "3": 0, "4": 0, "5": 0}
-        self.command_calls = {
-            "az": self.do_azimuth,
-            "new_az": self.do_new_azimuth,
-            "alt": self.do_altitude,
-            "new_alt": self.do_new_altitude,
-            "foc": self.do_focus,
-            "new_foc": self.do_new_focus,
-            "msk": self.do_mask,
-            "new_msk": self.do_new_mask,
-            "rot": self.do_rotation,
-            "new_rot": self.do_new_rotation,
-            "wdpanic": self.do_panic,
-            "autopark": self.do_autopark,
-            "park": self.do_park,
-            "AAstat": self.do_aastat,
-            "ABstat": self.do_abstat,
-            "ACstat": self.do_acstat,
-            "ADstat": self.do_adstat,
-            "AEstat": self.do_aestat,
-        }
-        self.commands = [
-            re.compile(r"^(?P<cmd>az)=\?$"),
-            re.compile(r"^(?P<cmd>wdpanic)=\?$"),
-            re.compile(r"^(?P<cmd>park)=\?$"),
-            re.compile(r"^(?P<cmd>park)=(?P<parameter>[01])$"),
-            re.compile(r"^(?P<cmd>A[ABCDE]stat)=\?$"),
-            re.compile(r"^(?P<cmd>autopark)=\?$"),
-            re.compile(r"^(?P<cmd>alt)=\?$"),
-            re.compile(r"^(?P<cmd>foc)=\?$"),
-            re.compile(r"^(?P<cmd>msk)=\?$"),
-            re.compile(r"^(?P<cmd>rot)=\?$"),
-            re.compile(r"^(?P<cmd>new_alt)=(?P<parameter>-?[0-6]\d?\.?\d?)"),
-            re.compile(r"^(?P<cmd>new_az)=(?P<parameter>-?[0-3][0-5]?\.?\d?)"),
-            re.compile(r"^(?P<cmd>new_msk)=(?P<parameter>[1-5])"),
-            re.compile(r"^(?P<cmd>new_foc)=(?P<parameter>[0-1]?[0-6]?\d?\d?\d)"),
-        ]
+        self.masks_rotation = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
+        self.commands = (
+            (re.compile(r"az=\?"), self.do_azimuth),
+            (re.compile(r"alt=\?"), self.do_altitude),
+            (
+                re.compile(r"new_alt=(?P<parameter>-?[0-6]\d?\.?\d?)"),
+                self.do_new_altitude,
+            ),
+            (re.compile(r"foc=\?"), self.do_focus),
+            (
+                re.compile(r"new_foc=(?P<parameter>[0-1]?[0-3]?\d?\d?\d)"),
+                self.do_new_focus,
+            ),
+            (re.compile(r"msk=\?"), self.do_mask),
+            (re.compile(r"new_msk=(?P<parameter>[1-5])"), self.do_new_mask),
+            (re.compile(r"rot=\?"), self.do_rotation),
+            (
+                re.compile(r"new_az=(?P<parameter>-?[0-3][0-5]?\.?\d?)"),
+                self.do_new_azimuth,
+            ),
+            (re.compile(r"wdpanic=\?"), self.do_panic),
+            (re.compile(r"autopark=\?"), self.do_autopark),
+            (re.compile(r"park=(?P<parameter>[\?01])"), self.do_park),
+            (re.compile(r"AAstat=\?"), self.do_aastat),
+            (re.compile(r"ABstat=\?"), self.do_abstat),
+            (re.compile(r"ACstat=\?"), self.do_acstat),
+            (re.compile(r"ADstat=\?"), self.do_adstat),
+            (re.compile(r"AEstat=\?"), self.do_aestat),
+        )
         self.log = logging.getLogger(__name__)
+        print("MockServer created")
 
     async def start(self):
         """Start the server."""
@@ -136,12 +129,9 @@ class MockServer:
         reader : `asyncio.StreamReader`
         writer : `asyncio.StreamWriter`
 
-        Raises
-        ------
-        Exception
-            Raised when command is not implemented.
         """
         while True:
+            self.log.debug("In cmd loop")
             line = await reader.readuntil(b"\r")
             self.log.debug(f"Received: {line}")
             if not line:
@@ -149,30 +139,24 @@ class MockServer:
                 return
             line = line.decode().strip("\r")
             self.log.debug(f"Decoded {line}")
-            for command in self.commands:
-                matched_command = command.match(line)
-                self.log.debug(f"{matched_command}")
+            for regex, command_method in self.commands:
+                matched_command = regex.fullmatch(line)
                 if matched_command:
-                    command_group = matched_command.group("cmd")
-                    self.log.debug(f"Matched {command_group}")
-                    if command_group in self.command_calls:
-                        self.log.info(f"{command_group}")
-                        called_command = self.command_calls[command_group]
-                        try:
-                            parameter = matched_command.group("parameter")
-                            self.log.debug(f"{parameter}")
-                        except IndexError:
-                            parameter = None
-                        if parameter is None:
-                            msg = await called_command() + "\r"
-                        else:
-                            msg = await called_command(parameter) + "\r"
-                        msg = msg.encode("ascii")
-                        writer.write(msg)
-                        self.log.debug(f"Wrote {msg}")
-                        await writer.drain()
+                    self.log.debug(f"{line} match: {matched_command}")
+                    self.log.debug(f"method: {command_method}")
+                    try:
+                        parameter = matched_command.group("parameter")
+                        self.log.debug(f"parameter={parameter}")
+                    except IndexError:
+                        parameter = None
+                    if parameter is None:
+                        msg = await command_method()
                     else:
-                        raise Exception("Command is not implemented")
+                        msg = await command_method(parameter)
+                    writer.write(msg.encode("ascii") + b"\r")
+                    self.log.debug(f"Wrote {msg}")
+                    await writer.drain()
+                    break
 
     async def do_azimuth(self):
         """Return azimuth position.
@@ -263,7 +247,7 @@ class MockServer:
         -------
         str
         """
-        self.mask = str(mask)
+        self.mask = int(mask)
         return ""
 
     async def do_rotation(self):
@@ -273,7 +257,7 @@ class MockServer:
         -------
         str
         """
-        return f"{self.masks[self.mask]}"
+        return f"{self.masks_rotation[self.mask]}"
 
     async def do_new_rotation(self, rotation):
         """Set the new mask rotation value.
@@ -286,10 +270,10 @@ class MockServer:
         -------
         str
         """
-        self.masks[self.mask] = float(rotation)
+        self.masks_rotation[self.mask] = float(rotation)
         return ""
 
-    async def do_park(self, park=None):
+    async def do_park(self, park="?"):
         """Park or unpark the CBP.
 
         Parameters
@@ -300,7 +284,7 @@ class MockServer:
         -------
         str
         """
-        if park is None:
+        if park == "?":
             self.log.info(f"Park: {self.park}")
             return f"{int(self.park)}"
         else:

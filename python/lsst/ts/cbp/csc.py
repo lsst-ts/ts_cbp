@@ -31,6 +31,8 @@ class CBPCSC(salobj.ConfigurableCsc):
     component : `CBPComponent`
     simulator : `None` or `MockServer`
     telemetry_task : `asyncio.Future`
+    telemetry_time : `float`
+    in_position_time : `int`
 
     """
 
@@ -57,6 +59,7 @@ class CBPCSC(salobj.ConfigurableCsc):
         self.simulator = None
         self.telemetry_task = salobj.make_done_future()
         self.telemetry_time = 0.5
+        self.in_position_time = 20
         self.log.info("CBP CSC initialized")
 
     async def do_move(self, data):
@@ -80,10 +83,15 @@ class CBPCSC(salobj.ConfigurableCsc):
 
         """
         while True:
-            self.log.debug("Begin sending telemetry")
-            await self.component.update_status()
-            if self.component.status.panic:
-                self.fault(1, "CBP Panicked. Check hardware and reset device.")
+            try:
+                self.log.debug("Begin sending telemetry")
+                await self.component.update_status()
+                if self.component.status.panic:
+                    self.fault(1, "CBP Panicked. Check hardware and reset device.")
+            except asyncio.CancelledError:
+                raise
+            except Exception as e:
+                self.log.error(f"{e}")
 
             await asyncio.sleep(self.telemetry_time)
 
@@ -97,7 +105,7 @@ class CBPCSC(salobj.ConfigurableCsc):
         """
         self.assert_enabled("setFocus")
         await self.component.change_focus(data.focus)
-        await asyncio.wait_for(self.in_position(), 20)
+        await asyncio.wait_for(self.in_position(), self.in_position_time)
 
     async def do_park(self, data):
         """Park the CBP.
@@ -109,7 +117,7 @@ class CBPCSC(salobj.ConfigurableCsc):
         """
         self.assert_enabled("park")
         await self.component.set_park()
-        await asyncio.wait_for(self.in_position(), 20)
+        await asyncio.wait_for(self.in_position(), self.in_position_time)
 
     async def do_unpark(self, data):
         """Unpark the CBP.
@@ -120,7 +128,7 @@ class CBPCSC(salobj.ConfigurableCsc):
         """
         self.assert_enabled("unpark")
         await self.component.set_unpark()
-        await asyncio.wait_for(self.in_position(), 20)
+        await asyncio.wait_for(self.in_position(), self.in_position_time)
 
     async def do_changeMask(self, data):
         """Changes the mask.
@@ -132,7 +140,7 @@ class CBPCSC(salobj.ConfigurableCsc):
         """
         self.assert_enabled("changeMask")
         await self.component.set_mask(data.mask)
-        await asyncio.wait_for(self.in_position(), 20)
+        await asyncio.wait_for(self.in_position(), self.in_position_time)
 
     async def handle_summary_state(self):
         """Handle the summary state."""
@@ -140,19 +148,17 @@ class CBPCSC(salobj.ConfigurableCsc):
             if self.simulation_mode and self.simulator is None:
                 self.simulator = mock_server.MockServer()
                 await self.simulator.start()
-            if self.telemetry_task.done():
-                self.telemetry_task = asyncio.create_task(self.telemetry())
             if self.component.connected is False:
                 await self.component.connect()
-                await self.initialize_target()
+            if self.telemetry_task.done():
+                self.telemetry_task = asyncio.create_task(self.telemetry())
             if self.component.parked is True:
                 await self.component.set_unpark()
         else:
             if self.simulator is not None:
                 await self.simulator.stop()
                 self.simulator = None
-            if self.component.connected is True:
-                await self.component.disconnect()
+            await self.component.disconnect()
             self.telemetry_task.cancel()
 
     async def configure(self, config):
@@ -178,30 +184,20 @@ class CBPCSC(salobj.ConfigurableCsc):
             self.simulator = None
 
     async def in_position(self):
-        """Wait for CBP to be in position.
+        """Wait for all axes of the CBP to be in position.
 
-        * Wait for CBP to be in position.
+        In this case, in position is defined as the encoder values being
+        within tolerance to the target values.
         """
         while not self.position:
             await asyncio.sleep(self.telemetry_time)
         self.log.info("Motion finished")
 
     def position(self):
-        """Is the CBP in position."""
+        """Is all of the axes of the CBP in position."""
         return (
             self.component.in_position.azimuth
             and self.component.in_position.elevation
             and self.component.in_position.focus
             and self.component.in_position.mask_rotate
         )
-
-    async def initialize_target(self):
-        await self.component.get_cbp_telemetry()
-        self.evt_target.set_put(
-            azimuth=self.component.azimuth,
-            elevation=self.component.elevation,
-            focus=self.component.focus,
-            mask=self.component.mask,
-            mask_rotation=self.component.mask_rotation,
-        )
-        self.component.update_in_position()
