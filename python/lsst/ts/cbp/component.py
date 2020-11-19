@@ -194,8 +194,6 @@ class CBPComponent:
         """Get the azimuth value.
         """
         azimuth = float(await self.send_command("az=?"))
-        if not self.csc.tel_azimuth.has_data:
-            self.csc.evt_target.set_put(azimuth=azimuth)
         self.csc.tel_azimuth.set_put(azimuth=azimuth)
 
     async def move_azimuth(self, position: float):
@@ -212,14 +210,10 @@ class CBPComponent:
             Raised when the new value falls outside the accepted range.
 
         """
-        if position < -45 or position > 45:
-            raise ValueError(
-                f"New azimuth value {position:0.2f} exceeds Azimuth limit [-45, 45]."
-            )
-        else:
-            self.csc.evt_target.set_put(azimuth=position)
-            await self.send_command(f"new_az={position}")
-            self.csc.evt_inPosition.set_put(azimuth=False)
+        self.assert_in_range("azimuth", position, -45, 45)
+        self.csc.evt_target.set_put(azimuth=position)
+        await self.send_command(f"new_az={position}")
+        self.csc.evt_inPosition.set_put(azimuth=False)
 
     async def get_elevation(self):
         """Read and record the mount elevation encoder, in degrees.
@@ -228,8 +222,6 @@ class CBPComponent:
 
         """
         elevation = float(await self.send_command("alt=?"))
-        if not self.csc.tel_elevation.has_data:
-            self.csc.evt_target.set_put(elevation=elevation)
         self.csc.tel_elevation.set_put(elevation=elevation)
 
     async def move_elevation(self, position: float):
@@ -246,22 +238,16 @@ class CBPComponent:
             Raised when the new value falls outside the accepted range.
 
         """
-        if position < -69 or position > 45:
-            raise ValueError(
-                f"New altitude value {position:0.2f} exceeds altitude limit [-69, 45]."
-            )
-        else:
-            self.csc.evt_target.set_put(elevation=position)
-            await self.send_command(f"new_alt={position}")
-            self.csc.evt_inPosition.set_put(elevation=False)
+        self.assert_in_range("elevation", position, -69, 45)
+        self.csc.evt_target.set_put(elevation=position)
+        await self.send_command(f"new_alt={position}")
+        self.csc.evt_inPosition.set_put(elevation=False)
 
     async def get_focus(self):
         """Get the focus value.
 
         """
         focus = int(await self.send_command("foc=?"))
-        if not self.csc.tel_focus.has_data:
-            self.csc.evt_target.set_put(focus=focus)
         self.csc.tel_focus.set_put(focus=focus)
 
     async def change_focus(self, position: int):
@@ -277,14 +263,10 @@ class CBPComponent:
         ValueError
             Raised when the new value falls outside the accepted range.
         """
-        if position < 0 or position > 13000:
-            raise ValueError(
-                f"New focus value {position} exceeds focus limit [0, 13000]."
-            )
-        else:
-            self.csc.evt_target.set_put(focus=int(position))
-            await self.send_command(f"new_foc={int(position)}")
-            self.csc.evt_inPosition.set_put(focus=False)
+        self.assert_in_range("focus", position, 0, 13000)
+        self.csc.evt_target.set_put(focus=int(position))
+        await self.send_command(f"new_foc={int(position)}")
+        self.csc.evt_inPosition.set_put(focus=False)
 
     async def get_mask(self):
         """Get mask and mask rotation value.
@@ -295,8 +277,6 @@ class CBPComponent:
         mask = str(int(float(await self.send_command("msk=?"))))
         mask = self.masks.get(mask).name
         mask_rotation = float(await self.send_command("rot=?"))
-        if not self.csc.tel_mask.has_data:
-            self.csc.evt_target.set_put(mask=mask, mask_rotation=mask_rotation)
         self.csc.tel_mask.set_put(mask=mask, mask_rotation=mask_rotation)
 
     async def set_mask(self, mask: str):
@@ -332,10 +312,7 @@ class CBPComponent:
             Raised when the new value falls outside the accepted range.
 
         """
-        if mask_rotation < 0 or mask_rotation > 360:
-            raise ValueError(
-                f"New mask rotation value {mask_rotation:0.2f} exceeds limits [0, 360]."
-            )
+        self.assert_in_range("mask_rotation", mask_rotation, 0, 360)
         self.csc.evt_target.set_put(mask_rotation=mask_rotation)
         await self.send_command(f"new_rot={mask_rotation}")
         self.csc.evt_inPosition.set_put(mask_rotation=False)
@@ -415,3 +392,27 @@ class CBPComponent:
         await self.check_park()
         await self.get_cbp_telemetry()
         self.update_in_position()
+
+    def assert_in_range(self, name, value, min_value, max_value):
+        """Raise ValueError if a value is out of range.
+
+        Parameters
+        ----------
+        name : `str`
+            The name of the parameter.
+        value : `float`
+            The received value.
+        min_value : `float`
+            The minimum accepted value.
+        max_value : `float`
+            The maximum accepted value.
+
+        Raises
+        ------
+        ValueError
+            Raised when a value is outside of the given range.
+        """
+        if value < min_value or value > max_value:
+            raise ValueError(
+                f"{name} = {value} not in range [{min_value}, {max_value}]"
+            )

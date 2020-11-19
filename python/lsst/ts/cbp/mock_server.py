@@ -56,9 +56,8 @@ class MockServer:
     encoders : `Encoders`
     park : `bool`
     auto_park : `bool`
-    masks : `dict` of `str`:`float`
-    command_calls : `dict` of `str`:`functools.partial`
-    commands : `list` of `re.Pattern`
+    masks_rotation : `dict` of `str`:`float`
+    commands : `tuple` of `re.Pattern`:`functools.partial`
     log : `logging.Logger`
     """
 
@@ -105,7 +104,6 @@ class MockServer:
             (re.compile(r"AEstat=\?"), self.do_aestat),
         )
         self.log = logging.getLogger(__name__)
-        print("MockServer created")
 
     async def start(self):
         """Start the server."""
@@ -142,8 +140,9 @@ class MockServer:
             for regex, command_method in self.commands:
                 matched_command = regex.fullmatch(line)
                 if matched_command:
-                    self.log.debug(f"{line} match: {matched_command}")
-                    self.log.debug(f"method: {command_method}")
+                    self.log.debug(
+                        f"{line} match: {matched_command} method: {command_method}"
+                    )
                     try:
                         parameter = matched_command.group("parameter")
                         self.log.debug(f"parameter={parameter}")

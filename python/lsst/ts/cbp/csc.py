@@ -31,9 +31,10 @@ class CBPCSC(salobj.ConfigurableCsc):
     component : `CBPComponent`
     simulator : `None` or `MockServer`
     telemetry_task : `asyncio.Future`
-    telemetry_time : `float`
-    in_position_time : `int`
-
+    telemetry_interval : `float`
+        The interval that telemetry is published.
+    in_position_timeout : `int`
+        The time to wait for all encoders of the CBP to be in position.
     """
 
     valid_simulation_modes = (0, 1)
@@ -58,8 +59,8 @@ class CBPCSC(salobj.ConfigurableCsc):
         self.component = component.CBPComponent(self)
         self.simulator = None
         self.telemetry_task = salobj.make_done_future()
-        self.telemetry_time = 0.5
-        self.in_position_time = 20
+        self.telemetry_interval = 0.5
+        self.in_position_timeout = 20
         self.log.info("CBP CSC initialized")
 
     async def do_move(self, data):
@@ -76,7 +77,7 @@ class CBPCSC(salobj.ConfigurableCsc):
             self.component.move_elevation(data.elevation),
             self.component.move_azimuth(data.azimuth),
         )
-        await asyncio.wait_for(self.in_position(), 20)
+        await asyncio.wait_for(self.in_position(), self.in_position_timeout)
 
     async def telemetry(self):
         """Publish the updated telemetry.
@@ -86,14 +87,23 @@ class CBPCSC(salobj.ConfigurableCsc):
             try:
                 self.log.debug("Begin sending telemetry")
                 await self.component.update_status()
+                if not self.evt_target.has_data:
+                    self.evt_target.set_put(
+                        azimuth=self.component.azimuth,
+                        elevation=self.component.elevation,
+                        focus=self.component.focus,
+                        mask=self.component.mask,
+                        mask_rotation=self.component.mask_rotation,
+                    )
                 if self.component.status.panic:
                     self.fault(1, "CBP Panicked. Check hardware and reset device.")
+                    return
             except asyncio.CancelledError:
                 raise
             except Exception as e:
                 self.log.error(f"{e}")
 
-            await asyncio.sleep(self.telemetry_time)
+            await asyncio.sleep(self.telemetry_interval)
 
     async def do_setFocus(self, data):
         """Sets the focus.
@@ -105,7 +115,7 @@ class CBPCSC(salobj.ConfigurableCsc):
         """
         self.assert_enabled("setFocus")
         await self.component.change_focus(data.focus)
-        await asyncio.wait_for(self.in_position(), self.in_position_time)
+        await asyncio.wait_for(self.in_position(), self.in_position_timeout)
 
     async def do_park(self, data):
         """Park the CBP.
@@ -117,7 +127,7 @@ class CBPCSC(salobj.ConfigurableCsc):
         """
         self.assert_enabled("park")
         await self.component.set_park()
-        await asyncio.wait_for(self.in_position(), self.in_position_time)
+        await asyncio.wait_for(self.in_position(), self.in_position_timeout)
 
     async def do_unpark(self, data):
         """Unpark the CBP.
@@ -128,7 +138,7 @@ class CBPCSC(salobj.ConfigurableCsc):
         """
         self.assert_enabled("unpark")
         await self.component.set_unpark()
-        await asyncio.wait_for(self.in_position(), self.in_position_time)
+        await asyncio.wait_for(self.in_position(), self.in_position_timeout)
 
     async def do_changeMask(self, data):
         """Changes the mask.
@@ -140,7 +150,7 @@ class CBPCSC(salobj.ConfigurableCsc):
         """
         self.assert_enabled("changeMask")
         await self.component.set_mask(data.mask)
-        await asyncio.wait_for(self.in_position(), self.in_position_time)
+        await asyncio.wait_for(self.in_position(), self.in_position_timeout)
 
     async def handle_summary_state(self):
         """Handle the summary state."""
@@ -190,7 +200,7 @@ class CBPCSC(salobj.ConfigurableCsc):
         within tolerance to the target values.
         """
         while not self.position:
-            await asyncio.sleep(self.telemetry_time)
+            await asyncio.sleep(self.telemetry_interval)
         self.log.info("Motion finished")
 
     def position(self):
