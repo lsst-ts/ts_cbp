@@ -117,6 +117,9 @@ class CBPCSCTestCase(asynctest.TestCase, salobj.BaseCscTestCase):
                     focus=True,
                 )
 
+            # with self.subTest("Test improper move command"):
+            #     await self.csc.component.send_command("new_az=75")
+
     async def test_telemetry(self):
         async with self.make_csc(initial_state=salobj.State.ENABLED, simulation_mode=1):
             await self.assert_next_sample(

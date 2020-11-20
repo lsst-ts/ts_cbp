@@ -3,6 +3,7 @@ __all__ = ["Encoders", "MockServer"]
 import asyncio
 import re
 import logging
+import enum
 
 from lsst.ts import simactuators
 
@@ -33,6 +34,17 @@ class Encoders:
             min_position=1, max_position=5, speed=1, start_position=1
         )
         self.MASK_ROTATE = simactuators.CircularPointToPointActuator(speed=10)
+
+
+class StatusError(enum.Flag):
+    NO = 0
+    POSITION = 1
+    SERIAL_ENCODER = enum.auto()
+    SOFTWARE_LOWER_MOTION_LIMIT = enum.auto()
+    SOFTWARE_UPPER_MOTION_LIMIT = enum.auto()
+    HARDWARE_LOWER_MOTION_LIMIT = enum.auto()
+    HARDWARE_UPPER_MOTION_LIMIT = enum.auto()
+    TORQUE_LIMIT = enum.auto()
 
 
 class MockServer:
@@ -177,7 +189,10 @@ class MockServer:
         -------
         str
         """
-        self.encoders.AZIMUTH.set_position(float(azimuth))
+        try:
+            self.encoders.AZIMUTH.set_position(float(azimuth))
+        except ValueError:
+            pass  # figure out what the real controller does
         return ""
 
     async def do_altitude(self):
@@ -200,7 +215,10 @@ class MockServer:
         -------
         str
         """
-        self.encoders.ELEVATION.set_position(float(altitude))
+        try:
+            self.encoders.ELEVATION.set_position(float(altitude))
+        except ValueError:
+            pass  # figure out what the real controller does
         return ""
 
     async def do_focus(self):
@@ -223,7 +241,10 @@ class MockServer:
         -------
         str
         """
-        self.encoders.FOCUS.set_position(int(focus))
+        try:
+            self.encoders.FOCUS.set_position(int(focus))
+        except ValueError:
+            pass  # figure out what the real controller does
         return ""
 
     async def do_mask(self):
@@ -246,7 +267,10 @@ class MockServer:
         -------
         str
         """
-        self.mask = int(mask)
+        try:
+            self.mask = int(mask)
+        except ValueError:
+            pass  # figure out what the real controller does
         return ""
 
     async def do_rotation(self):
@@ -269,7 +293,10 @@ class MockServer:
         -------
         str
         """
-        self.masks_rotation[self.mask] = float(rotation)
+        try:
+            self.masks_rotation[self.mask] = float(rotation)
+        except ValueError:
+            pass  # figure out what the real controller does
         return ""
 
     async def do_park(self, park="?"):
