@@ -163,7 +163,10 @@ class MockServer:
                     if parameter is None:
                         msg = await command_method()
                     else:
-                        msg = await command_method(parameter)
+                        try:
+                            msg = await command_method(parameter)
+                        except Exception:
+                            raise asyncio.TimeoutError()
                     writer.write(msg.encode("ascii") + b"\r")
                     self.log.debug(f"Wrote {msg}")
                     await writer.drain()
@@ -191,9 +194,9 @@ class MockServer:
         """
         try:
             self.encoders.AZIMUTH.set_position(float(azimuth))
+            return ""
         except ValueError:
-            pass  # figure out what the real controller does
-        return ""
+            raise  # figure out what the real controller does
 
     async def do_altitude(self):
         """Return the altitude position.
@@ -217,9 +220,9 @@ class MockServer:
         """
         try:
             self.encoders.ELEVATION.set_position(float(altitude))
+            return ""
         except ValueError:
             pass  # figure out what the real controller does
-        return ""
 
     async def do_focus(self):
         """Return the focus value.
@@ -243,9 +246,9 @@ class MockServer:
         """
         try:
             self.encoders.FOCUS.set_position(int(focus))
+            return ""
         except ValueError:
             pass  # figure out what the real controller does
-        return ""
 
     async def do_mask(self):
         """Return the mask value.
@@ -269,9 +272,9 @@ class MockServer:
         """
         try:
             self.mask = int(mask)
+            return ""
         except ValueError:
             pass  # figure out what the real controller does
-        return ""
 
     async def do_rotation(self):
         """Return the mask rotation value.
@@ -295,9 +298,9 @@ class MockServer:
         """
         try:
             self.masks_rotation[self.mask] = float(rotation)
+            return ""
         except ValueError:
             pass  # figure out what the real controller does
-        return ""
 
     async def do_park(self, park="?"):
         """Park or unpark the CBP.
