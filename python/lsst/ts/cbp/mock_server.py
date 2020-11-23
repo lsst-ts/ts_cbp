@@ -160,13 +160,20 @@ class MockServer:
                         self.log.debug(f"parameter={parameter}")
                     except IndexError:
                         parameter = None
-                    if parameter is None:
-                        msg = await command_method()
-                    else:
-                        try:
+                    try:
+                        if parameter is None:
+                            msg = await command_method()
+                        else:
                             msg = await command_method(parameter)
-                        except Exception:
-                            raise asyncio.TimeoutError()
+                    except ValueError as e:
+                        self.log.info(f"command {line} failed: {e}")
+                        # TODO DM-27693: reply with an error signal so the
+                        # client knows there is a problem
+                    except Exception:
+                        # An unexpected error; log a traceback
+                        self.log.exception("Bug! Command {line} filed.")
+                        # TODO DM-27693: reply with an error signal so the
+                        # client knows there is a problem
                     writer.write(msg.encode("ascii") + b"\r")
                     self.log.debug(f"Wrote {msg}")
                     await writer.drain()
