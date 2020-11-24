@@ -174,9 +174,10 @@ class MockServer:
                         self.log.exception("Bug! Command {line} filed.")
                         # TODO DM-27693: reply with an error signal so the
                         # client knows there is a problem
-                    writer.write(msg.encode("ascii") + b"\r")
-                    self.log.debug(f"Wrote {msg}")
-                    await writer.drain()
+                    else:
+                        writer.write(msg.encode("ascii") + b"\r")
+                        self.log.debug(f"Wrote {msg}")
+                        await writer.drain()
                     break
 
     async def do_azimuth(self):
