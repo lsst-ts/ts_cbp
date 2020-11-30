@@ -204,7 +204,12 @@ class MockServer:
             self.encoders.AZIMUTH.set_position(float(azimuth))
             return ""
         except ValueError:
-            raise  # figure out what the real controller does
+            if float(azimuth) > 45:
+                self.encoders.AZIMUTH.set_position(45)
+                return ""
+            elif float(azimuth) < -45:
+                self.encoders.AZIMUTH.set_position(-45)
+                return ""
 
     async def do_altitude(self):
         """Return the altitude position.
@@ -230,7 +235,12 @@ class MockServer:
             self.encoders.ELEVATION.set_position(float(altitude))
             return ""
         except ValueError:
-            pass  # figure out what the real controller does
+            if float(altitude) > 45:
+                self.encoders.ELEVATION.set_position(45)
+                return ""
+            elif float(altitude) < -69:
+                self.encoders.ELEVATION.set_position(-69)
+                return ""
 
     async def do_focus(self):
         """Return the focus value.
@@ -256,7 +266,12 @@ class MockServer:
             self.encoders.FOCUS.set_position(int(focus))
             return ""
         except ValueError:
-            pass  # figure out what the real controller does
+            if int(focus) > 13000:
+                self.encoders.FOCUS.set_position(13000)
+                return ""
+            elif int(focus) < 0:
+                self.encoders.FOCUS.set_position(0)
+                return ""
 
     async def do_mask(self):
         """Return the mask value.
@@ -282,7 +297,12 @@ class MockServer:
             self.mask = int(mask)
             return ""
         except ValueError:
-            pass  # figure out what the real controller does
+            if mask > 5:
+                self.mask = 5
+                return ""
+            elif mask < 1:
+                self.mask = 1
+                return ""
 
     async def do_rotation(self):
         """Return the mask rotation value.
