@@ -73,6 +73,8 @@ The CSC will use it in simulation mode.
 Updating Firmware of the CBP
 ============================
 
+Firmware repository is `ts_cbp_firmware <https://github.com/lsst-ts/ts_cbp_firmware>`_
+
 1. Download ``Galil Design Kit``
 2. Edit dmc code
 3. Click Download program to hardware
