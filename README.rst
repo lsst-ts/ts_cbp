@@ -31,11 +31,11 @@ Run the following once in the repository
 
 .. code::
 
-    git config core.hooksPath .githooks
+    pre-commit install
 
 ``black`` will now run as a pre-commit git hook.
 
-There is a tests/test_black that checks if any files have not been linted by ``black``.
+There is a plugin pytest-black that checks if any files have not been linted by ``black``.
 
 Usage
 =====
