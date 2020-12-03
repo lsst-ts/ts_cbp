@@ -27,8 +27,13 @@ test:
         - ts-dds <= v6.9.0
         - ts-idl
         - ts-salobj
+<<<<<<< HEAD
         - black
         - ts-simactuators
+=======
+        - black==19.10b0
+        - pytest-black
+>>>>>>> Switch to pre-commit hook and pytest-black
     source_files:
         - python
         - bin
