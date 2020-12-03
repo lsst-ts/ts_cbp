@@ -158,11 +158,11 @@ class CBPCSC(salobj.ConfigurableCsc):
             if self.simulation_mode and self.simulator is None:
                 self.simulator = mock_server.MockServer()
                 await self.simulator.start()
-            if self.component.connected is False:
+            if not self.component.connected:
                 await self.component.connect()
             if self.telemetry_task.done():
                 self.telemetry_task = asyncio.create_task(self.telemetry())
-            if self.component.parked is True:
+            if self.component.parked:
                 await self.component.set_unpark()
         else:
             if self.simulator is not None:

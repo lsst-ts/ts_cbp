@@ -373,16 +373,16 @@ class CBPComponent:
         """
         self.host = config.address
         self.port = config.port
-        self.masks.get("1").name = config.mask1["name"]
-        self.masks.get("1").rotation = config.mask1["rotation"]
-        self.masks.get("2").name = config.mask2["name"]
-        self.masks.get("2").rotation = config.mask2["rotation"]
-        self.masks.get("3").name = config.mask3["name"]
-        self.masks.get("3").rotation = config.mask3["rotation"]
-        self.masks.get("4").name = config.mask4["name"]
-        self.masks.get("4").rotation = config.mask4["rotation"]
-        self.masks.get("5").name = config.mask5["name"]
-        self.masks.get("5").rotation = config.mask5["rotation"]
+        self.masks["1"].name = config.mask1["name"]
+        self.masks["1"].rotation = config.mask1["rotation"]
+        self.masks["2"].name = config.mask2["name"]
+        self.masks["2"].rotation = config.mask2["rotation"]
+        self.masks["3"].name = config.mask3["name"]
+        self.masks["3"].rotation = config.mask3["rotation"]
+        self.masks["4"].name = config.mask4["name"]
+        self.masks["4"].rotation = config.mask4["rotation"]
+        self.masks["5"].name = config.mask5["name"]
+        self.masks["5"].rotation = config.mask5["rotation"]
 
     async def update_status(self):
         """Update the status.
