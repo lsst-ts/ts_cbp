@@ -1,5 +1,5 @@
 import pathlib
-from . import component
+from . import component, mock_server
 import asyncio
 from lsst.ts import salobj
 
@@ -11,49 +11,41 @@ class CBPCSC(salobj.ConfigurableCsc):
 
     Parameters
     ----------
-    port : `str`
-        This is the ip address of the CBP.
+    simulation_mode : `int`, optional
+        Supported simulation mode values
 
-    address : `int`
-        This is the port of the CBP
-
-    speed : `float`
-        The amount of time it takes to move the CBP into place.
-
-    factor : `float`
-        The factor to multiply the speed of the CBP.
-
-    initial_state : `salobj.State`
-        The initial state of the csc, typically STANDBY or OFFLINE
+        * 0: normal operation
+        * 1: mock controller
+    initial_state : `lsst.ts.salobj.State`, optional
+        Initial state is meant for unit tests, defaults to
+        `lsst.ts.salobj.State.STANDBY`
+    config_dir : `None` or `str` or `pathlib.Path`, optional
+        Meant for unit tests.
+        Tells the CSC where to look for the configuration files.
+        Normal operation will always be in a configuration repository returned
+        `get_config_dir`.
 
     Attributes
     ----------
-    log : `logging.Logger`
-        This is the log for the class.
 
-    summary_state : `salobj.State`
-        This is the current state for the csc.
-
-    model : `CBPModel`
-        This is the model that links the component to the CSC.
-
-    cbp_speed : `float`
-        The amount of time that it takes to move CBP's axes.
-
-    factor : `float`
-        The factor to add to the speed of the CBP.
-
+    component : `CBPComponent`
+    simulator : `None` or `MockServer`
+    telemetry_task : `asyncio.Future`
+    telemetry_interval : `float`
+        The interval that telemetry is published.
+    in_position_timeout : `int`
+        The time to wait for all encoders of the CBP to be in position.
     """
+
+    valid_simulation_modes = (0, 1)
+    """The valid simulation modes for the CBP."""
 
     def __init__(
         self,
+        simulation_mode=0,
         initial_state: salobj.State = salobj.State.STANDBY,
         config_dir=None,
-        speed=3.5,
-        factor=1.25,
-        simulation_mode=0,
     ):
-
         schema_path = pathlib.Path(__file__).parents[4].joinpath("schema", "CBP.yaml")
 
         super().__init__(
@@ -64,9 +56,11 @@ class CBPCSC(salobj.ConfigurableCsc):
             simulation_mode=simulation_mode,
             schema_path=schema_path,
         )
-        self.model = component.CBPComponent()
-        self.cbp_speed = speed
-        self.factor = factor
+        self.component = component.CBPComponent(self)
+        self.simulator = None
+        self.telemetry_task = salobj.make_done_future()
+        self.telemetry_interval = 0.5
+        self.in_position_timeout = 20
         self.log.info("CBP CSC initialized")
 
     async def do_move(self, data):
@@ -74,137 +68,146 @@ class CBPCSC(salobj.ConfigurableCsc):
 
         Parameters
         ----------
-        data
-
-        Returns
-        -------
-        None
+        data : `cmd_move.DataType`
 
         """
         self.log.debug("Begin move")
         self.assert_enabled("move")
-        await asyncio.join(
-            [
-                self.model.move_elevation(data.elevation),
-                self.model.move_azimuth(data.azimuth),
-            ]
+        await asyncio.gather(
+            self.component.move_elevation(data.elevation),
+            self.component.move_azimuth(data.azimuth),
         )
-        self.cmd_move.ack_in_progress(data, "In progress")
-        await asyncio.sleep(self.cbp_speed * self.factor)
+        await asyncio.wait_for(self.in_position(), self.in_position_timeout)
 
     async def telemetry(self):
-        """Actually updates all of the sal telemetry objects.
-
-        Returns
-        -------
-        None
+        """Publish the updated telemetry.
 
         """
         while True:
-            self.log.debug("Begin sending telemetry")
-            await self.model.publish()
-            self.tel_azimuth.set_put(azimuth=self.model.azimuth)
-            self.tel_elevation.set_put(elevation=self.model.elevation)
-            self.tel_focus.set_put(focus=self.model.focus)
-            self.tel_mask.set_put(
-                mask=self.model.mask, mask_rotation=self.model.mask_rotation
-            )
-            self.tel_parked.set_put(
-                autoparked=self.model.auto_parked, parked=self.model.parked
-            )
-            self.tel_status.set_put(
-                panic=self.model.panic_status,
-                azimuth=self.model.encoder_status.AZIMUTH,
-                altitude=self.model.encoder_status.ELEVATION,
-                mask=self.model.encoder_status.MASK_SELECT,
-                mask_rotation=self.model.encoder_status.MASK_ROTATE,
-                focus=self.model.encoder_status.FOCUS,
-            )
-            if self.model.panic_status == 1:
-                self.fault("CBP Panicked. Check hardware and reset device.")
+            try:
+                self.log.debug("Begin sending telemetry")
+                await self.component.update_status()
+                if not self.evt_target.has_data:
+                    self.evt_target.set_put(
+                        azimuth=self.component.azimuth,
+                        elevation=self.component.elevation,
+                        focus=self.component.focus,
+                        mask=self.component.mask,
+                        mask_rotation=self.component.mask_rotation,
+                    )
+                if self.component.status.panic:
+                    self.fault(1, "CBP Panicked. Check hardware and reset device.")
+                    return
+            except asyncio.CancelledError:
+                raise
+            except Exception as e:
+                self.log.error(f"{e}")
 
-            await asyncio.sleep(self.heartbeat_interval)
+            await asyncio.sleep(self.telemetry_interval)
 
     async def do_setFocus(self, data):
         """Sets the focus.
 
         Parameters
         ----------
-        data
-
-        Returns
-        -------
-        None
+        data : `cmd_setFocus.DataType`
 
         """
         self.assert_enabled("setFocus")
-        await self.model.change_focus(data.focus)
+        await self.component.change_focus(data.focus)
+        await asyncio.wait_for(self.in_position(), self.in_position_timeout)
 
     async def do_park(self, data):
         """Park the CBP.
 
-        Returns
-        -------
-        None
+        Parameters
+        ----------
+        data : `cmd_park.DataType`
 
         """
         self.assert_enabled("park")
-        await self.model.set_park()
+        await self.component.set_park()
+        await asyncio.wait_for(self.in_position(), self.in_position_timeout)
 
     async def do_unpark(self, data):
-        """Unpark the CBP."""
+        """Unpark the CBP.
+
+        Parameters
+        ----------
+        data : `cmd_unpark.DataType`
+        """
         self.assert_enabled("unpark")
-        await self.model.set_unpark()
+        await self.component.set_unpark()
+        await asyncio.wait_for(self.in_position(), self.in_position_timeout)
 
     async def do_changeMask(self, data):
         """Changes the mask.
 
         Parameters
         ----------
-        data
-
-        Returns
-        -------
-        None
+        data : `cmd_changeMask.DataType`
 
         """
         self.assert_enabled("changeMask")
-        await self.model.change_mask(data.mask)
+        await self.component.set_mask(data.mask)
+        await asyncio.wait_for(self.in_position(), self.in_position_timeout)
 
-    async def begin_enable(self, data):
-        """Overrides the begin_enable function in salobj.BaseCsc to make sure
-        the CBP is un-parked.
+    async def handle_summary_state(self):
+        """Handle the summary state."""
+        if self.disabled_or_enabled:
+            if self.simulation_mode and self.simulator is None:
+                self.simulator = mock_server.MockServer()
+                await self.simulator.start()
+            if not self.component.connected:
+                await self.component.connect()
+            if self.telemetry_task.done():
+                self.telemetry_task = asyncio.create_task(self.telemetry())
+            if self.component.parked:
+                await self.component.set_unpark()
+        else:
+            if self.simulator is not None:
+                await self.simulator.stop()
+                self.simulator = None
+            await self.component.disconnect()
+            self.telemetry_task.cancel()
+
+    async def configure(self, config):
+        """Configure the CSC.
 
         Parameters
         ----------
-        data
-
-        Returns
-        -------
-        None
-
+        config : `types.SimpleNamespace`
         """
-        await self.model.set_unpark()
-
-    async def end_start(self, data):
-        await self.model.connect()
-        self.telemetry_task = asyncio.ensure_future(self.telemetry())
-
-    async def end_standby(self, data):
-        self.telemetry_task.cancel()
-        await self.model.disconnect()
-
-    async def configure(self, config):
-        self.model.configure(config)
+        self.component.configure(config)
 
     @staticmethod
     def get_config_pkg():
+        """Return the name of the configuration repository."""
         return "ts_config_mtcalsys"
 
-    async def implement_simulation_mode(self, simulation_mode):
-        if simulation_mode == 0:
-            self.model.set_simulation_mode(simulation_mode)
-        elif simulation_mode == 1:
-            self.model.set_simulation_mode(simulation_mode)
-        else:
-            raise salobj.ExpectedError(f"{simulation_mode} is not a valid value")
+    async def close_tasks(self):
+        await super().close_tasks()
+        self.telemetry_task.cancel()
+        await self.component.disconnect()
+        if self.simulator is not None:
+            await self.simulator.stop()
+            self.simulator = None
+
+    async def in_position(self):
+        """Wait for all axes of the CBP to be in position.
+
+        In this case, in position is defined as the encoder values being
+        within tolerance to the target values.
+        """
+        while not self.position:
+            await asyncio.sleep(self.telemetry_interval)
+        self.log.info("Motion finished")
+
+    def position(self):
+        """Is all of the axes of the CBP in position."""
+        return (
+            self.component.in_position.azimuth
+            and self.component.in_position.elevation
+            and self.component.in_position.focus
+            and self.component.in_position.mask_rotate
+        )

@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import asyncio
 from lsst.ts.cbp.csc import CBPCSC
 

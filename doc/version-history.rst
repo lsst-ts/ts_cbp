@@ -9,4 +9,6 @@ Unreleased
 * Documentation added
 * ``Black`` linting support added
 * Basic simulator support
+* Added target event
+* Added inPosition event
 

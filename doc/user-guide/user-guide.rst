@@ -18,17 +18,21 @@ A link to the SAL API can be found at the top of the :doc:`index </index>`.
 
 The main commands that will likely be used are 
 
-:ref:`ts_xml:CBP:Commands:moveAzimuth`
-
-:ref:`ts_xml:CBP:Commands:moveAltitude`
+:ref:`ts_xml:CBP:Commands:move`
 
 :ref:`ts_xml:CBP:Commands:changeMask`
 
-The relevant telemetry includes
+The relevant events include
+
+:ref:`ts_xml:CBP:Events:target`
+
+:ref:`ts_xml:CBP:Events:inPosition`
+
+The relevant telemetry include
 
 :ref:`ts_xml:CBP:Telemetry:azimuth`
 
-:ref:`ts_xml:CBP:Telemetry:altitude`
+:ref:`ts_xml:CBP:Telemetry:elevation`
 
 :ref:`ts_xml:CBP:Telemetry:mask`
 
@@ -81,6 +85,13 @@ Getting telemetry from the CBP
 
     azimuth = await cbp.tel_azimuth.aget(timeout=2)
     altitude = await cbp.tel_altitude.aget(timeout=2)
+
+Getting events from the CBP
+
+.. code::
+
+    target = await cbp.evt_target.aget(timeout=2)
+    in_position = await cbp.evt_inPosition.aget(timeout=2)
 
 Clean up
 

@@ -28,6 +28,7 @@ test:
         - ts-idl
         - ts-salobj
         - black
+        - ts-simactuators
     source_files:
         - python
         - bin
@@ -50,3 +51,4 @@ requirements:
         - setuptools_scm
         - ts-salobj
         - ts-idl
+        - ts-simactuators

@@ -15,8 +15,8 @@ The CBP software consists of a typical salobj CSC, a firmware written in DMC and
 Dependencies
 ============
 
-* `SAL <https://ts-sal.lsst.io>`_ - v4.0.0
-* `ts_salobj <https://ts-salobj.lsst.io>`_ - v5.x.0
+* `SAL <https://ts-sal.lsst.io>`_ - v5
+* `ts_salobj <https://ts-salobj.lsst.io>`_ - v6.x
 
 .. _developer-guide:developer-guide:api:
 
@@ -65,7 +65,7 @@ Simulator
 =========
 
 The simulator is located in the ``mock_server`` module.
-It is not ready for use.
+The CSC will use it in simulation mode.
 
 
 .. _developer-guide:developer-guide:firmware:
