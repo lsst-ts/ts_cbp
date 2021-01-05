@@ -52,8 +52,11 @@ class CBPComponent:
         self.host = None
         self.port = None
         self.connected = False
-        # FIXME DM-27602 separate error tolerances for each encoder
-        self.error_tolerance = 0.3
+        # According to the firmware, error limit is 9999 steps for watchdog
+        # Conversion from steps to degrees is 186413 steps to one degree
+        # 9999 divided by 186413 is approximately 0.053
+        # So the value is set to 0.1
+        self.error_tolerance = 0.1
         self.generate_mask_info()
         self.log.info("CBP component initialized")
 
