@@ -13,27 +13,27 @@ class Encoders:
 
     Attributes
     ----------
-    AZIMUTH : `lsst.ts.simactuators.PointToPointActuator`
-    ELEVATION : `lsst.ts.simactuators.PointToPointActuator`
-    FOCUS : `lsst.ts.simactuators.PointToPointActuator`
-    MASK_SELECT : `lsst.ts.simactuators.PointToPointActuator`
-    MASK_ROTATE : `lsst.ts.simactuators.CircularPointToPointActuator`
+    azimuth : `lsst.ts.simactuators.PointToPointActuator`
+    elevation : `lsst.ts.simactuators.PointToPointActuator`
+    focus : `lsst.ts.simactuators.PointToPointActuator`
+    mask_select : `lsst.ts.simactuators.PointToPointActuator`
+    mask_rotate : `lsst.ts.simactuators.CircularPointToPointActuator`
     """
 
     def __init__(self):
-        self.AZIMUTH = simactuators.PointToPointActuator(
+        self.azimuth = simactuators.PointToPointActuator(
             min_position=-45, max_position=45, speed=10, start_position=0
         )
-        self.ELEVATION = simactuators.PointToPointActuator(
+        self.elevation = simactuators.PointToPointActuator(
             min_position=-69, max_position=45, speed=10, start_position=0
         )
-        self.FOCUS = simactuators.PointToPointActuator(
+        self.focus = simactuators.PointToPointActuator(
             min_position=0, max_position=13000, speed=200, start_position=0
         )
-        self.MASK_SELECT = simactuators.PointToPointActuator(
+        self.mask_select = simactuators.PointToPointActuator(
             min_position=1, max_position=5, speed=1, start_position=1
         )
-        self.MASK_ROTATE = simactuators.CircularPointToPointActuator(speed=10)
+        self.mask_rotate = simactuators.CircularPointToPointActuator(speed=10)
 
 
 class StatusError(enum.Flag):
@@ -187,7 +187,7 @@ class MockServer:
         -------
         str
         """
-        return f"{self.encoders.AZIMUTH.position()}"
+        return f"{self.encoders.azimuth.position()}"
 
     async def do_new_azimuth(self, azimuth):
         """Set the new azimuth position.
@@ -201,14 +201,14 @@ class MockServer:
         str
         """
         try:
-            self.encoders.AZIMUTH.set_position(float(azimuth))
+            self.encoders.azimuth.set_position(float(azimuth))
             return ""
         except ValueError:
-            if float(azimuth) > 45:
-                self.encoders.AZIMUTH.set_position(45)
+            if float(azimuth) > self.encoders.azimuth.max_position:
+                self.encoders.azimuth.set_position(self.encoders.azimuth.max_position)
                 return ""
-            elif float(azimuth) < -45:
-                self.encoders.AZIMUTH.set_position(-45)
+            elif float(azimuth) < self.encoders.azimuth.min_position:
+                self.encoders.azimuth.set_position(self.encoders.azimuth.min_position)
                 return ""
 
     async def do_altitude(self):
@@ -218,7 +218,7 @@ class MockServer:
         -------
         str
         """
-        return f"{self.encoders.ELEVATION.position()}"
+        return f"{self.encoders.elevation.position()}"
 
     async def do_new_altitude(self, altitude):
         """Set the new altitude position.
@@ -232,14 +232,18 @@ class MockServer:
         str
         """
         try:
-            self.encoders.ELEVATION.set_position(float(altitude))
+            self.encoders.elevation.set_position(float(altitude))
             return ""
         except ValueError:
-            if float(altitude) > 45:
-                self.encoders.ELEVATION.set_position(45)
+            if float(altitude) > self.encoders.elevation.max_position:
+                self.encoders.elevation.set_position(
+                    self.encoders.elevation.max_position
+                )
                 return ""
-            elif float(altitude) < -69:
-                self.encoders.ELEVATION.set_position(-69)
+            elif float(altitude) < self.encoders.elevation.min_position:
+                self.encoders.elevation.set_position(
+                    self.encoders.elevation.min_position
+                )
                 return ""
 
     async def do_focus(self):
@@ -249,7 +253,7 @@ class MockServer:
         -------
         str
         """
-        return f"{int(self.encoders.FOCUS.position())}"
+        return f"{int(self.encoders.focus.position())}"
 
     async def do_new_focus(self, focus):
         """Set the new focus value.
@@ -263,14 +267,14 @@ class MockServer:
         str
         """
         try:
-            self.encoders.FOCUS.set_position(int(focus))
+            self.encoders.focus.set_position(int(focus))
             return ""
         except ValueError:
-            if int(focus) > 13000:
-                self.encoders.FOCUS.set_position(13000)
+            if int(focus) > self.encoders.focus.max_position:
+                self.encoders.focus.set_position(self.encoders.focus.max_position)
                 return ""
-            elif int(focus) < 0:
-                self.encoders.FOCUS.set_position(0)
+            elif int(focus) < self.encoders.focus.min_position:
+                self.encoders.focus.set_position(self.encoders.focus.min_position)
                 return ""
 
     async def do_mask(self):
@@ -280,7 +284,7 @@ class MockServer:
         -------
         str
         """
-        return f"{self.mask}"
+        return f"{self.encoders.mask_select.position()}"
 
     async def do_new_mask(self, mask):
         """Set the new mask value.
@@ -294,14 +298,14 @@ class MockServer:
         str
         """
         try:
-            self.mask = int(mask)
+            self.encoders.mask_select.set_position(int(mask))
             return ""
         except ValueError:
-            if mask > 5:
-                self.mask = 5
+            if mask > self.encoders.mask_select.max_position:
+                self.encoders.mask_select.set_position(5)
                 return ""
-            elif mask < 1:
-                self.mask = 1
+            elif mask < self.encoders.mask_select.min_position:
+                self.encoders.mask_select.set_position(1)
                 return ""
 
     async def do_rotation(self):
@@ -311,7 +315,7 @@ class MockServer:
         -------
         str
         """
-        return f"{self.masks_rotation[self.mask]}"
+        return f"{self.encoders.mask_rotate.position()}"
 
     async def do_new_rotation(self, rotation):
         """Set the new mask rotation value.
@@ -325,10 +329,17 @@ class MockServer:
         str
         """
         try:
-            self.masks_rotation[self.mask] = float(rotation)
+            self.encoders.mask_rotate.set_position(float(rotation))
             return ""
         except ValueError:
-            pass  # figure out what the real controller does
+            if rotation > self.encoders.mask_rotate.max_position:
+                self.encoders.mask_rotate.set_position(
+                    self.encoders.mask_rotate.max_position
+                )
+            if rotation < self.encoders.mask_rotate.min_position:
+                self.encoder.MASK_SELECT.set_position(
+                    self.encoders.mask_rotate.min_position
+                )
 
     async def do_park(self, park="?"):
         """Park or unpark the CBP.
