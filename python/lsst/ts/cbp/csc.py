@@ -210,4 +210,5 @@ class CBPCSC(salobj.ConfigurableCsc):
             and self.component.in_position.elevation
             and self.component.in_position.focus
             and self.component.in_position.mask_rotate
+            and self.component.in_position.mask_select
         )
