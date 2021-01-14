@@ -180,6 +180,22 @@ class MockServer:
                         await writer.drain()
                     break
 
+    def set_constrained_position(self, value, actuator):
+        """Set actuator to position that is silently constrained to bounds.
+
+        Parameters
+        ----------
+        value : `float`
+            Desired value
+        actuator : `lsst.ts.simactuators.PointToPointActuator`
+            The actuator to set.
+        """
+        constrained_value = min(
+            max(value, actuator.min_position), actuator.max_position
+        )
+        self.log.info(f"constrained_value: {constrained_value}")
+        actuator.set_position(constrained_value)
+
     async def do_azimuth(self):
         """Return azimuth position.
 
@@ -200,16 +216,8 @@ class MockServer:
         -------
         str
         """
-        try:
-            self.encoders.azimuth.set_position(float(azimuth))
-            return ""
-        except ValueError:
-            if float(azimuth) > self.encoders.azimuth.max_position:
-                self.encoders.azimuth.set_position(self.encoders.azimuth.max_position)
-                return ""
-            elif float(azimuth) < self.encoders.azimuth.min_position:
-                self.encoders.azimuth.set_position(self.encoders.azimuth.min_position)
-                return ""
+        self.set_constrained_position(float(azimuth), self.encoders.azimuth)
+        return ""
 
     async def do_altitude(self):
         """Return the altitude position.
@@ -231,20 +239,8 @@ class MockServer:
         -------
         str
         """
-        try:
-            self.encoders.elevation.set_position(float(altitude))
-            return ""
-        except ValueError:
-            if float(altitude) > self.encoders.elevation.max_position:
-                self.encoders.elevation.set_position(
-                    self.encoders.elevation.max_position
-                )
-                return ""
-            elif float(altitude) < self.encoders.elevation.min_position:
-                self.encoders.elevation.set_position(
-                    self.encoders.elevation.min_position
-                )
-                return ""
+        self.set_constrained_position(float(altitude), self.encoders.elevation)
+        return ""
 
     async def do_focus(self):
         """Return the focus value.
@@ -266,16 +262,8 @@ class MockServer:
         -------
         str
         """
-        try:
-            self.encoders.focus.set_position(int(focus))
-            return ""
-        except ValueError:
-            if int(focus) > self.encoders.focus.max_position:
-                self.encoders.focus.set_position(self.encoders.focus.max_position)
-                return ""
-            elif int(focus) < self.encoders.focus.min_position:
-                self.encoders.focus.set_position(self.encoders.focus.min_position)
-                return ""
+        self.set_constrained_position(value=int(focus), actuator=self.encoders.focus)
+        return ""
 
     async def do_mask(self):
         """Return the mask value.
@@ -297,16 +285,10 @@ class MockServer:
         -------
         str
         """
-        try:
-            self.encoders.mask_select.set_position(int(mask))
-            return ""
-        except ValueError:
-            if mask > self.encoders.mask_select.max_position:
-                self.encoders.mask_select.set_position(5)
-                return ""
-            elif mask < self.encoders.mask_select.min_position:
-                self.encoders.mask_select.set_position(1)
-                return ""
+        self.set_constrained_position(
+            value=int(mask), actuator=self.encoders.mask_select
+        )
+        return ""
 
     async def do_rotation(self):
         """Return the mask rotation value.
@@ -328,18 +310,10 @@ class MockServer:
         -------
         str
         """
-        try:
-            self.encoders.mask_rotate.set_position(float(rotation))
-            return ""
-        except ValueError:
-            if rotation > self.encoders.mask_rotate.max_position:
-                self.encoders.mask_rotate.set_position(
-                    self.encoders.mask_rotate.max_position
-                )
-            if rotation < self.encoders.mask_rotate.min_position:
-                self.encoder.MASK_SELECT.set_position(
-                    self.encoders.mask_rotate.min_position
-                )
+        self.set_constrained_position(
+            value=float(rotation), actuator=self.encoders.mask_rotate
+        )
+        return ""
 
     async def do_park(self, park="?"):
         """Park or unpark the CBP.
