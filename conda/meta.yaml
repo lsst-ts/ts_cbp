@@ -21,7 +21,7 @@ build:
 test:
     requires:
         - ts-conda-build
-        - ts-dds <= v6.9.0
+        - ts-dds
         - ts-idl {{ idl_version }}
         - ts-salobj {{ salobj_version }}
     source_files:
