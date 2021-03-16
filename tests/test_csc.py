@@ -1,4 +1,3 @@
-import asynctest
 import unittest
 
 from lsst.ts import salobj, cbp
@@ -6,7 +5,7 @@ from lsst.ts import salobj, cbp
 STD_TIMEOUT = 15
 
 
-class CBPCSCTestCase(asynctest.TestCase, salobj.BaseCscTestCase):
+class CBPCSCTestCase(unittest.IsolatedAsyncioTestCase, salobj.BaseCscTestCase):
     def basic_make_csc(
         self, initial_state, config_dir=None, simulation_mode=1, **kwargs
     ):
