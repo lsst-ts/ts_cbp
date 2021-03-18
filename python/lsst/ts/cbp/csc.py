@@ -1,5 +1,6 @@
-import pathlib
+from . import __version__
 from . import component, mock_server
+from .config_schema import CONFIG_SCHEMA
 import asyncio
 from lsst.ts import salobj
 
@@ -39,6 +40,7 @@ class CBPCSC(salobj.ConfigurableCsc):
 
     valid_simulation_modes = (0, 1)
     """The valid simulation modes for the CBP."""
+    version = __version__
 
     def __init__(
         self,
@@ -46,7 +48,6 @@ class CBPCSC(salobj.ConfigurableCsc):
         initial_state: salobj.State = salobj.State.STANDBY,
         config_dir=None,
     ):
-        schema_path = pathlib.Path(__file__).parents[4].joinpath("schema", "CBP.yaml")
 
         super().__init__(
             name="CBP",
@@ -54,7 +55,7 @@ class CBPCSC(salobj.ConfigurableCsc):
             config_dir=config_dir,
             initial_state=initial_state,
             simulation_mode=simulation_mode,
-            schema_path=schema_path,
+            config_schema=CONFIG_SCHEMA,
         )
         self.component = component.CBPComponent(self)
         self.simulator = None
