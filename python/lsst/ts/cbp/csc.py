@@ -114,6 +114,7 @@ class CBPCSC(salobj.ConfigurableCsc):
         data : `cmd_setFocus.DataType`
 
         """
+        # raise Exception("Intentional Failure")
         self.assert_enabled("setFocus")
         await self.component.change_focus(data.focus)
         await asyncio.wait_for(self.in_position(), self.in_position_timeout)

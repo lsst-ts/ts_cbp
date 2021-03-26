@@ -1,2 +1,2 @@
-@Library('JenkinsShared')_
+@Library('JenkinsShared@tickets/DM-29418')_
 CondaPipeline(["ts_config_mtcalsys"], "ts-cbp", "lsst.ts.cbp")
