@@ -9,7 +9,7 @@ test_reqs = [
     "pytest-flake8",
     "pytest-coverage",
     "asynctest",
-    "black==19.10b0",
+    "black==20.8b1",
     "pytest-black",
 ]
 dev_requires = install_reqs + test_reqs + ["documenteer[pipelines]"]

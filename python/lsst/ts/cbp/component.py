@@ -194,8 +194,7 @@ class CBPComponent:
                     self.connected = False
 
     async def get_azimuth(self):
-        """Get the azimuth value.
-        """
+        """Get the azimuth value."""
         azimuth = float(await self.send_command("az=?"))
         self.csc.tel_azimuth.set_put(azimuth=azimuth)
 
@@ -247,9 +246,7 @@ class CBPComponent:
         self.csc.evt_inPosition.set_put(elevation=False)
 
     async def get_focus(self):
-        """Get the focus value.
-
-        """
+        """Get the focus value."""
         focus = int(await self.send_command("foc=?"))
         self.csc.tel_focus.set_put(focus=focus)
 
@@ -272,9 +269,7 @@ class CBPComponent:
         self.csc.evt_inPosition.set_put(focus=False)
 
     async def get_mask(self):
-        """Get mask and mask rotation value.
-
-        """
+        """Get mask and mask rotation value."""
         # If mask encoder is off then it will return "9.0" which is unknown
         # mask
         mask = str(int(float(await self.send_command("msk=?"))))
@@ -321,16 +316,13 @@ class CBPComponent:
         self.csc.evt_inPosition.set_put(mask_rotation=False)
 
     async def check_park(self):
-        """Get the park variable from CBP.
-
-        """
+        """Get the park variable from CBP."""
         parked = bool(int(await self.send_command("park=?")))
         autoparked = bool(int(await self.send_command("autopark=?")))
         self.csc.tel_parked.set_put(parked=parked, autoparked=autoparked)
 
     async def set_park(self):
-        """Park the CBP.
-        """
+        """Park the CBP."""
         await self.send_command("park=1")
         await self.check_park()
 
@@ -340,9 +332,7 @@ class CBPComponent:
         await self.check_park()
 
     async def check_cbp_status(self):
-        """Read and record the status of the encoders.
-
-        """
+        """Read and record the status of the encoders."""
         panic = bool(int(await self.send_command("wdpanic=?")))
         azimuth = bool(int(await self.send_command("AAstat=?")))
         elevation = bool(int(await self.send_command("ABstat=?")))
@@ -359,9 +349,7 @@ class CBPComponent:
         )
 
     async def get_cbp_telemetry(self):
-        """Get the position data of the CBP.
-
-        """
+        """Get the position data of the CBP."""
         await self.get_elevation()
         await self.get_azimuth()
         await self.get_focus()
@@ -388,9 +376,7 @@ class CBPComponent:
         self.masks["5"].rotation = config.mask5["rotation"]
 
     async def update_status(self):
-        """Update the status.
-
-        """
+        """Update the status."""
         await self.check_cbp_status()
         await self.check_park()
         await self.get_cbp_telemetry()

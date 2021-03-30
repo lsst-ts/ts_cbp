@@ -16,7 +16,13 @@ class CBPCSCTestCase(unittest.IsolatedAsyncioTestCase, salobj.BaseCscTestCase):
     async def test_standard_state_transitions(self):
         async with self.make_csc(initial_state=salobj.State.STANDBY, simulation_mode=1):
             await self.check_standard_state_transitions(
-                enabled_commands=("changeMask", "move", "park", "unpark", "setFocus",)
+                enabled_commands=(
+                    "changeMask",
+                    "move",
+                    "park",
+                    "unpark",
+                    "setFocus",
+                )
             )
 
     async def test_bin_script(self):
