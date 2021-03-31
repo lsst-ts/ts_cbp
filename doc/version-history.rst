@@ -11,4 +11,5 @@ Unreleased
 * Basic simulator support
 * Added target event
 * Added inPosition event
+* Upgrade to black 20.8
 

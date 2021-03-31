@@ -81,9 +81,7 @@ class CBPCSC(salobj.ConfigurableCsc):
         await asyncio.wait_for(self.in_position(), self.in_position_timeout)
 
     async def telemetry(self):
-        """Publish the updated telemetry.
-
-        """
+        """Publish the updated telemetry."""
         while True:
             try:
                 self.log.debug("Begin sending telemetry")
